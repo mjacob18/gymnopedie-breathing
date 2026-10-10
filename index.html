@@ -126,7 +126,8 @@ select { font: 15px var(--f-body); padding: 8px 10px; border-radius: 6px; border
         <input type="file" id="file" accept="audio/*,.mp3">
       </label>
       <button id="play" type="button">Pause preview</button>
-      <div class="status" id="status">Silent preview. Load “Gymnopédie No. 1 &amp; 3” (6:25 MP3) to play with sound, or drop it on the page. The file stays on your device.</div>
+      <button id="forget" type="button" hidden>Forget recording</button>
+      <div class="status" id="status">Silent preview. Load “Gymnopédie No. 1 &amp; 3” (6:25 MP3) to play with sound, or drop it on the page. This browser remembers it for next time; the file never leaves your device.</div>
     </div>
     <div class="seekrow">
       <span id="tNow">0:06</span>
@@ -244,22 +245,41 @@ select { font: 15px var(--f-body); padding: 8px 10px; border-radius: 6px; border
   ['play', 'seeked', 'playing', 'ratechange'].forEach(ev => audio.addEventListener(ev, reanchor));
   audio.addEventListener('play', () => { if (!$('status').classList.contains('warn')) status(`Playing. Breathe with the circle; the bass note on each bar line sends out a ripple.`); updatePlayBtn(); }); audio.addEventListener('pause', updatePlayBtn); audio.addEventListener('ended', updatePlayBtn);
 
-  function loadFile(f) {
+  // ---- the chosen recording is kept in this browser's IndexedDB, so it loads by itself next time
+  const saved = (() => {
+    let db;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('gymnopedie-breathing', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('audio');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const run = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('audio', mode), q = fn(t.objectStore('audio'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error);
+    }));
+    return { get: () => run('readonly', s => s.get('recording')), put: f => run('readwrite', s => s.put(f, 'recording')), clear: () => run('readwrite', s => s.delete('recording')) };
+  })();
+
+  function loadFile(f, fromSaved) {
     if (!f) return;
     if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(f.name)) { status(`“${f.name}” isn't an audio file. Choose the MP3 of the recording.`, true); return; }
+    if (audio.src) URL.revokeObjectURL(audio.src);
     audio.src = URL.createObjectURL(f);
     audio.onloadedmetadata = () => {
       hasAudio = true; vPlaying = false;
       audio.currentTime = Math.min(Math.max(vT, 0), audio.duration - 1);
       const off = Math.abs(audio.duration - DUR);
       if (off > 2) status(`Loaded “${f.name}” (${fmt(audio.duration)}). The timing was measured on a ${fmt(DUR)} recording, so a different recording won't line up. Steady pacing still works.`, true);
-      else status(`Loaded “${f.name}”. Press Play. The first three breaths are steady 10 s breaths over the waves; the music starts at ${fmt(NO1)}.`);
+      else status(`${fromSaved ? `Loaded “${f.name}” from this browser` : `Loaded “${f.name}”`}. Press Play. The first three breaths are steady 10 s breaths over the waves; the music starts at ${fmt(NO1)}.`);
+      (fromSaved ? Promise.resolve() : saved.put(f)).then(() => { $('forget').hidden = false; }, () => {});
       $('fileLabel').classList.remove('primary'); $('fileLabel').firstChild.textContent = 'Change recording';
       $('play').classList.add('primary');
       updatePlayBtn();
     };
-    audio.onerror = () => status('That file could not be played in this browser. Try an MP3.', true);
+    audio.onerror = () => { status('That file could not be played in this browser. Try an MP3.', true); if (fromSaved) saved.clear().catch(() => {}); };
   }
+  saved.get().then(f => { if (f && !hasAudio) loadFile(f, true); }, () => {});
+  $('forget').onclick = () => saved.clear().then(() => { $('forget').hidden = true; status('This browser no longer keeps the recording. It plays until you leave the page.'); }, () => status('Could not remove the saved recording.', true));
   function status(msg, warn) { const s = $('status'); s.textContent = msg; s.classList.toggle('warn', !!warn); }
   $('file').addEventListener('change', e => loadFile(e.target.files[0]));
   addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dropping'); });

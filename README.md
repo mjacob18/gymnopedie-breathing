@@ -6,7 +6,7 @@ Published page: https://claude.ai/artifact/H1gbek3v7iTfS14Jjx1jjT
 
 ## How it works
 
-- `index.html` is the whole page. Open it, choose the recording (MP3, 6:25, "Gymnopedie No 1 & 3 --Satie" from *A Day at the Beach*), and press Play. The audio stays on the device.
+- `index.html` is the whole page. Open it, choose the recording (MP3, 6:25, "Gymnopedie No 1 & 3 --Satie" from *A Day at the Beach*), and press Play. The audio stays on the device: the browser keeps a copy in IndexedDB so the page loads it by itself on the next visit ("Forget recording" removes it).
 - The MP3 is a commercial recording and is **not** in this repo. Re-analysis needs the file.
 - Timing was measured from that recording's bass line:
   - No. 1: 86 bars from 0:36.4 to about 3:34, bass alternating G and D each bar. Average 86.8 BPM (2.07 s per bar).
