@@ -47,3 +47,12 @@ python3 analysis/phrases.py path/to/recording.mp3     # writes hon_timeline.json
 ```
 
 Then replace `__TIMELINE__` in `analysis/hon_shirabe_template.html` with the contents of `hon_timeline.json` to produce `hon-shirabe.html`. `data/hon_timeline.json` holds the current result.
+
+## Presentation pages
+
+`present/gymnopedie.html` and `present/hon-shirabe.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
+
+- `gymnopedie.mp3`, `01 Gymnopedie No 1 & 3 --Satie.mp3`, `01_Gymnopedie_No_1_3_--Satie.mp3`, `Gymnopedie No 1 & 3 --Satie.mp3`
+- `hon-shirabe.mp3`, `01 - Hon Shirabe (Original Tuning).mp3`, `01_-_Hon_Shirabe_Original_Tuning.mp3`, `Hon Shirabe (Original Tuning).mp3`
+
+If none is there, choose the file under Options; the browser then remembers it. Rebuild both with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the two timelines in `data/`).
