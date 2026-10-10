@@ -1,0 +1,414 @@
+<title>Gymnopédie Breathing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;1,6..96,400;1,6..96,500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one calm column; the breathing circle is the instrument, readouts sit beside it like a pacer's dial, transport and notes below. */
+:root {
+  --bg: #e8ecef;
+  --surface: #f3f5f7;
+  --ink: #1c2633;
+  --muted: #5a6877;
+  --line: #c3ccd5;
+  --breath-rgb: 63 112 120;
+  --wave-rgb: 128 146 160;
+  --breath: rgb(var(--breath-rgb));
+  --f-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --f-body: "Jost", "Futura", "Avenir Next", system-ui, sans-serif;
+  --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131a; --surface: #131b24; --ink: #dce4ea; --muted: #8592a1; --line: #24303d;
+    --breath-rgb: 142 194 192; --wave-rgb: 96 112 128; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d131a; --surface: #131b24; --ink: #dce4ea; --muted: #8592a1; --line: #24303d;
+  --breath-rgb: 142 194 192; --wave-rgb: 96 112 128; color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 32px 56px; display: grid; gap: 28px; }
+
+header { display: grid; gap: 6px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: clamp(34px, 6vw, 52px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; color: var(--muted); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 28px; align-items: center; }
+.dial { position: relative; width: 100%; max-width: 520px; aspect-ratio: 1; justify-self: center; }
+.dial canvas { width: 100%; height: 100%; display: block; }
+.cue { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.cue-word { font-family: var(--f-display); font-style: italic; font-size: clamp(26px, 4.4vw, 38px); line-height: 1.1; transition: opacity .6s ease; }
+.cue-count { font-family: var(--f-mono); font-size: 13px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+
+.readout { display: grid; gap: 0; margin: 0; border-top: 1px solid var(--line); }
+.readout div { display: grid; gap: 2px; padding-block: 12px; border-bottom: 1px solid var(--line); min-width: 0; }
+.readout dt { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.readout dd { margin: 0; font-size: 18px; font-variant-numeric: tabular-nums; }
+.readout dd small { font-size: 13px; color: var(--muted); }
+.big { font-family: var(--f-display); font-size: 34px !important; line-height: 1.1; }
+
+.trace { display: grid; gap: 6px; }
+.trace-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#trace { width: 100%; height: 96px; display: block; background: var(--surface); border-radius: 6px; }
+
+.transport { display: grid; gap: 14px; padding: 18px; background: var(--surface); border-radius: 10px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button, .filebtn { font: 500 15px var(--f-body); border-radius: 999px; padding: 10px 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.primary { background: var(--breath); border-color: var(--breath); color: var(--bg); }
+button:disabled { opacity: .45; cursor: default; }
+button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-visible { outline: 2px solid var(--breath); outline-offset: 2px; }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.filebtn { position: relative; display: inline-block; }
+.status { font-size: 14px; color: var(--muted); min-width: 0; flex: 1 1 220px; }
+.status.warn { color: var(--ink); }
+.seekrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); }
+#seek { width: 100%; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 4px; background: var(--line); cursor: pointer; }
+#seek::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+#seek::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--sw); }
+
+.settings { display: flex; gap: 18px 28px; flex-wrap: wrap; align-items: end; }
+.field { display: grid; gap: 4px; font-size: 14px; }
+.field > span { font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+select { font: 15px var(--f-body); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 15px; padding-bottom: 8px; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; border-top: 1px solid var(--line); padding-top: 24px; }
+.notes h2 { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 22px; margin: 0 0 6px; }
+.notes p { margin: 0 0 10px; color: var(--muted); font-size: 15px; max-width: 62ch; }
+.notes strong { color: var(--ink); font-weight: 500; }
+
+.dropping .transport { outline: 2px dashed var(--breath); outline-offset: 4px; }
+
+@media (max-width: 720px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .readout { grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .wrap { padding-inline: 16px; }
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <div class="eyebrow">Resonant breathing · around 0.1 Hz</div>
+    <h1>Gymnopédie Breathing</h1>
+    <p class="lede">The circle grows as you breathe in and shrinks as you breathe out. Each breath spans one four-bar phrase of Satie, timed from the bass line of your recording.</p>
+  </header>
+
+  <section class="stage" aria-label="Breathing guide">
+    <div class="dial">
+      <canvas id="circle" aria-hidden="true"></canvas>
+      <div class="cue" aria-live="polite">
+        <div class="cue-word" id="cueWord">Settle in</div>
+        <div class="cue-count" id="cueCount">&nbsp;</div>
+      </div>
+    </div>
+    <dl class="readout">
+      <div><dt>Breaths per minute</dt><dd class="big" id="rate">6.0</dd></div>
+      <div><dt>This breath</dt><dd id="len">10.0 s <small>5.0 in · 5.0 out</small></dd></div>
+      <div><dt>Where</dt><dd id="where">Lead-in</dd></div>
+      <div><dt>Section</dt><dd id="section">Waves</dd></div>
+      <div><dt>Bass note</dt><dd id="bass">–</dd></div>
+    </dl>
+  </section>
+
+  <section class="trace" aria-label="Breath trace">
+    <div class="trace-head"><span>Breath trace · past 10 s, next 20 s</span><span>Ticks mark bar lines</span></div>
+    <canvas id="trace" aria-hidden="true"></canvas>
+  </section>
+
+  <section class="transport" aria-label="Playback">
+    <div class="row">
+      <label class="filebtn primary" id="fileLabel">Choose the recording
+        <input type="file" id="file" accept="audio/*,.mp3">
+      </label>
+      <button id="play" type="button">Pause preview</button>
+      <div class="status" id="status">Silent preview. Load “Gymnopédie No. 1 &amp; 3” (6:25 MP3) to play with sound, or drop it on the page. The file stays on your device.</div>
+    </div>
+    <div class="seekrow">
+      <span id="tNow">0:06</span>
+      <input type="range" id="seek" min="0" max="384.94" step="0.1" value="6.4" aria-label="Position in recording">
+      <span id="tEnd">6:25</span>
+    </div>
+    <div class="legend">
+      <span style="--sw: rgb(var(--wave-rgb) / .55)">Waves, steady 10 s breaths</span>
+      <span style="--sw: var(--breath)">Gymnopédie No. 1</span>
+      <span style="--sw: rgb(var(--breath-rgb) / .55)">Gymnopédie No. 3</span>
+    </div>
+  </section>
+
+  <section class="settings" aria-label="Settings">
+    <label class="field"><span>Pacing</span>
+      <select id="mode">
+        <option value="phrase">Follow the phrases (4 bars per breath)</option>
+        <option value="steady">Steady 6 per minute (exactly 0.1 Hz)</option>
+      </select>
+    </label>
+    <label class="field"><span>In : out</span>
+      <select id="split">
+        <option value="even">Even, turn at the bar line</option>
+        <option value="long">Longer out-breath, 40 : 60</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" id="ripples" checked> Ripple on each bass note</label>
+  </section>
+
+  <section class="notes">
+    <div>
+      <h2>How the timing was found</h2>
+      <p>Bass onsets were detected in the recording and fitted to a bar grid. That gave <strong>86 bars</strong> for No. 1, with the left hand alternating G and D each bar, then <strong>69 bars</strong> for No. 3. A breath begins every fourth bar, so it follows the pianist's slowing at phrase ends.</p>
+      <p>No. 3 has a few longer phrases. There the breath spans six bars instead of four.</p>
+    </div>
+    <div>
+      <h2>Why it is not exactly 6 per minute</h2>
+      <p>This pianist averages <strong>87 beats per minute</strong>, so one bar lasts 2.07 s. A four-bar breath averages <strong>8.8 s</strong>, about 6.8 breaths per minute, ranging from 7.2 to 12.9 s.</p>
+      <p>Choose <strong>Steady 6 per minute</strong> for an exact 10 s cycle. The music then drifts in and out of phase with your breath.</p>
+    </div>
+  </section>
+</main>
+
+<script id="timeline" type="application/json">{"duration":384.94,"bars1":[36.41,38.51,40.61,42.69,44.8,46.92,48.96,50.98,52.93,55.07,57.09,59.12,61.24,63.26,65.38,67.4,69.43,71.54,73.44,75.47,77.56,79.64,81.83,83.94,86.15,88.36,90.35,92.29,94.28,96.47,98.51,100.31,102.18,104.28,106.52,108.84,110.82,112.7,114.65,116.62,118.83,120.49,122.35,124.1,126.78,128.82,130.84,132.92,134.97,137.07,139.0,140.98,143.03,145.06,147.13,149.19,151.24,153.31,155.2,157.12,159.23,161.34,163.49,165.64,167.95,170.18,172.27,174.25,176.23,178.33,180.3,182.18,184.16,186.22,188.47,190.54,192.74,194.96,196.99,199.12,201.53,203.81,205.8,208.06,210.21,212.64],"bars3":[221.98,224.08,226.23,228.26,230.55,232.68,234.67,236.54,238.68,240.79,242.88,245.02,247.15,249.3,251.37,253.41,255.36,257.46,259.7,261.99,264.56,266.53,268.46,270.34,272.46,274.52,276.81,279.0,281.0,283.09,285.29,287.28,289.15,291.1,293.12,295.18,297.12,299.06,301.08,303.21,305.37,307.42,309.46,311.55,313.42,315.38,317.46,319.55,322.22,324.36,326.33,328.32,330.45,332.56,335.08,337.51,339.7,341.86,344.06,346.39,348.85,350.91,352.9,354.77,356.48,358.06,360.1,362.13,364.29],"bass1":["G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","F#2","B2","E2","E2","D2","A2","D2","D2","D2","D2","D2","D2","D2","D2","D2","E2","F#2","B2","E2","E2","E2","B2","A2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","G2","D2","F#2","B2","E2","E2","D2","A2","D2","D2","D2","D2","D2","D2","D2","D2","D2","E2","E2","E2","E2","E2","E2","B2","A2","D2","A2","A2"],"bass3":["A2","D2","A2","D2","A2","B2","G2","D2","A2","E2","G2","D2","G2","D2","G2","G2","G2","D2","G2","G2","C2","E2","C2","E2","C2","E2","A2","D2","A2","D2","A2","B2","G2","D2","A2","E2","E2","E2","D2","D2","D2","D2","G2","G2","G2","D2","G2","G2","C2","E2","C2","E2","C2","E2","A2","D2","A2","D2","A2","D2","A2","A2","D2","A2","D2","D2","A2","D2","D2"],"cycles":[[6.41,11.41,16.41,0,0,0],[16.41,21.41,26.41,0,0,0],[26.41,31.41,36.41,0,0,0],[36.41,40.61,44.8,1,1,4],[44.8,48.96,52.93,1,5,4],[52.93,57.09,61.24,1,9,4],[61.24,65.38,69.43,1,13,4],[69.43,73.44,77.56,1,17,4],[77.56,81.83,86.15,1,21,4],[86.15,90.35,94.28,1,25,4],[94.28,98.51,102.18,1,29,4],[102.18,106.52,110.82,1,33,4],[110.82,114.65,118.83,1,37,4],[118.83,122.35,126.78,1,41,4],[126.78,130.84,134.97,1,45,4],[134.97,139.0,143.03,1,49,4],[143.03,147.13,151.24,1,53,4],[151.24,155.2,159.23,1,57,4],[159.23,163.49,167.95,1,61,4],[167.95,172.27,176.23,1,65,4],[176.23,180.3,184.16,1,69,4],[184.16,188.47,192.74,1,73,4],[192.74,196.99,201.53,1,77,4],[201.53,205.8,210.21,1,81,4],[210.21,214.64,221.98,1,85,2],[221.98,226.23,230.55,3,1,4],[230.55,234.67,238.68,3,5,4],[238.68,242.88,247.15,3,9,4],[247.15,251.37,255.36,3,13,4],[255.36,259.7,264.56,3,17,4],[264.56,270.34,276.81,3,21,6],[276.81,281.0,285.29,3,27,4],[285.29,289.15,293.12,3,31,4],[293.12,297.12,301.08,3,35,4],[301.08,305.37,309.46,3,39,4],[309.46,315.38,322.22,3,43,6],[322.22,328.32,335.08,3,49,6],[335.08,339.7,344.06,3,55,4],[344.06,348.85,352.9,3,59,4],[352.9,356.48,360.1,3,63,4],[360.1,364.29,371.5,3,67,3]]}</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById('timeline').textContent);
+  const cycles = D.cycles.map(([i, o, e, p, b, n]) => ({ i, o, e, p, b, n }));
+  const LEAD = cycles[0].i, NO1 = D.bars1[0], GAP = cycles.find(c => c.p === 1 && c.b === 85).o;
+  const NO3 = D.bars3[0], END = 371.5, DUR = D.duration;
+  const turnSet = new Set(cycles.map(c => c.i));
+  const downbeats = [...D.bars1.map((t, k) => ({ t, piece: 1, bar: k + 1 })), ...D.bars3.map((t, k) => ({ t, piece: 3, bar: k + 1 }))];
+  const SECTIONS = {
+    1: [[1, 4, 'Introduction'], [5, 20, 'Melody'], [21, 44, 'Middle strain'], [45, 60, 'Melody returns'], [61, 84, 'Middle strain returns'], [85, 86, 'Closing chord']],
+    3: [[1, 26, 'First half'], [27, 54, 'Second half'], [55, 69, 'Coda']],
+  };
+  const $ = id => document.getElementById(id);
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- settings (remembered per viewer when storage is available)
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const S = { mode: store.get('gb.mode') || 'phrase', split: store.get('gb.split') || 'even', ripples: store.get('gb.ripples') !== '0' && !reduceMotion };
+  $('mode').value = S.mode; $('split').value = S.split; $('ripples').checked = S.ripples;
+  $('mode').onchange = e => { S.mode = e.target.value; store.set('gb.mode', S.mode); };
+  $('split').onchange = e => { S.split = e.target.value; store.set('gb.split', S.split); };
+  $('ripples').onchange = e => { S.ripples = e.target.checked; store.set('gb.ripples', S.ripples ? '1' : '0'); };
+
+  // ---- breath model
+  function bsearch(arr, t, key) { let lo = 0, hi = arr.length - 1, ans = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (key(arr[m]) <= t) { ans = m; lo = m + 1; } else hi = m - 1; } return ans; }
+  function cycleAt(t) {
+    if (S.mode === 'steady') {
+      if (t < LEAD || t >= END) return null;
+      const k = Math.floor((t - LEAD) / 10), i = LEAD + 10 * k;
+      return { i, o: i + 5, e: i + 10, p: -1, n: 0 };
+    }
+    const k = bsearch(cycles, t, c => c.i);
+    if (k < 0 || t >= cycles[k].e) return null;
+    return cycles[k];
+  }
+  function breath(t) {
+    const c = cycleAt(t);
+    if (!c) return { v: 0, phase: 'rest', c: null };
+    const o = S.split === 'long' ? c.i + 0.4 * (c.e - c.i) : c.o;
+    if (t < o) { const p = (t - c.i) / (o - c.i); return { v: (1 - Math.cos(Math.PI * p)) / 2, phase: 'in', c, o, remain: o - t }; }
+    const q = (t - o) / (c.e - o);
+    return { v: (1 + Math.cos(Math.PI * q)) / 2, phase: 'out', c, o, remain: c.e - t };
+  }
+  function barAt(t) {
+    const k = bsearch(downbeats, t, d => d.t);
+    if (k < 0) return null;
+    const d = downbeats[k];
+    if (d.piece === 1 && t > GAP) return null;
+    if (d.piece === 3 && t > END) return null;
+    return d;
+  }
+  function sectionAt(t, d) {
+    if (t < NO1) return 'Waves before the music';
+    if (!d) return t < NO3 ? 'Between the pieces' : 'After the music';
+    const s = SECTIONS[d.piece].find(([a, b]) => d.bar >= a && d.bar <= b);
+    return s ? s[2] : '';
+  }
+
+  // ---- clock: audio when loaded, otherwise a silent virtual clock
+  const audio = new Audio(); audio.preload = 'auto';
+  let hasAudio = false, vPlaying = true, vT = LEAD, anchorA = 0, anchorP = 0, lastSeen = -1, lastFrame = performance.now();
+  function reanchor() { anchorA = audio.currentTime; anchorP = performance.now(); lastSeen = audio.currentTime; }
+  function clockNow(pn) {
+    if (!hasAudio) return vT;
+    if (audio.paused) return audio.currentTime;
+    const ct = audio.currentTime;
+    const est = anchorA + (pn - anchorP) / 1000 * audio.playbackRate;
+    if (ct !== lastSeen) { lastSeen = ct; if (Math.abs(est - ct) > 0.08) { anchorA = ct; anchorP = pn; return ct; } }
+    return est;
+  }
+  ['play', 'seeked', 'playing', 'ratechange'].forEach(ev => audio.addEventListener(ev, reanchor));
+  audio.addEventListener('play', () => { if (!$('status').classList.contains('warn')) status(`Playing. Breathe with the circle; the bass note on each bar line sends out a ripple.`); updatePlayBtn(); }); audio.addEventListener('pause', updatePlayBtn); audio.addEventListener('ended', updatePlayBtn);
+
+  function loadFile(f) {
+    if (!f) return;
+    if (!/^audio\//.test(f.type) && !/\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(f.name)) { status(`“${f.name}” isn't an audio file. Choose the MP3 of the recording.`, true); return; }
+    audio.src = URL.createObjectURL(f);
+    audio.onloadedmetadata = () => {
+      hasAudio = true; vPlaying = false;
+      audio.currentTime = Math.min(Math.max(vT, 0), audio.duration - 1);
+      const off = Math.abs(audio.duration - DUR);
+      if (off > 2) status(`Loaded “${f.name}” (${fmt(audio.duration)}). The timing was measured on a ${fmt(DUR)} recording, so a different recording won't line up. Steady pacing still works.`, true);
+      else status(`Loaded “${f.name}”. Press Play. The first three breaths are steady 10 s breaths over the waves; the music starts at ${fmt(NO1)}.`);
+      $('fileLabel').classList.remove('primary'); $('fileLabel').firstChild.textContent = 'Change recording';
+      $('play').classList.add('primary');
+      updatePlayBtn();
+    };
+    audio.onerror = () => status('That file could not be played in this browser. Try an MP3.', true);
+  }
+  function status(msg, warn) { const s = $('status'); s.textContent = msg; s.classList.toggle('warn', !!warn); }
+  $('file').addEventListener('change', e => loadFile(e.target.files[0]));
+  addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('dropping'); });
+  addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
+  addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('dropping'); loadFile(e.dataTransfer.files[0]); });
+
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try { if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); } else if (!on && wakeLock) { await wakeLock.release(); } } catch {}
+  }
+  function playing() { return hasAudio ? !audio.paused && !audio.ended : vPlaying; }
+  function togglePlay() {
+    if (hasAudio) { if (audio.paused) audio.play().catch(() => status('The browser blocked playback. Press Play again.', true)); else audio.pause(); }
+    else vPlaying = !vPlaying;
+    updatePlayBtn();
+  }
+  function updatePlayBtn() {
+    const on = playing();
+    $('play').textContent = hasAudio ? (on ? 'Pause' : 'Play') : (on ? 'Pause preview' : 'Resume preview');
+    keepAwake(on && hasAudio);
+  }
+  $('play').onclick = togglePlay;
+  addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|SELECT|BUTTON|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); togglePlay(); } });
+  let seeking = false;
+  $('seek').addEventListener('input', e => { seeking = true; const t = +e.target.value; if (hasAudio) audio.currentTime = t; else vT = t; ripples.length = 0; });
+  $('seek').addEventListener('change', () => { seeking = false; });
+
+  // seek track shows the sections
+  function paintSeek() {
+    const pc = t => (t / DUR * 100).toFixed(2) + '%';
+    const w = 'rgb(var(--wave-rgb) / .55)', a = 'var(--breath)', b = 'rgb(var(--breath-rgb) / .55)', n = 'var(--line)';
+    $('seek').style.background = `linear-gradient(90deg, ${n} 0 ${pc(LEAD)}, ${w} ${pc(LEAD)} ${pc(NO1)}, ${a} ${pc(NO1)} ${pc(GAP)}, ${n} ${pc(GAP)} ${pc(NO3)}, ${b} ${pc(NO3)} ${pc(END)}, ${n} ${pc(END)} 100%)`;
+  }
+  paintSeek();
+
+  // ---- drawing
+  const cv = $('circle'), cx = cv.getContext('2d'), tv = $('trace'), tx = tv.getContext('2d');
+  let col = {};
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    col = { b: cs.getPropertyValue('--breath-rgb').trim(), w: cs.getPropertyValue('--wave-rgb').trim(), ink: cs.getPropertyValue('--ink').trim(), muted: cs.getPropertyValue('--muted').trim(), line: cs.getPropertyValue('--line').trim() };
+  }
+  readTokens();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens);
+  new MutationObserver(readTokens).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const rgba = (rgb, a) => `rgb(${rgb} / ${a})`;
+  function fit(c) {
+    const r = c.getBoundingClientRect(), d = devicePixelRatio || 1;
+    const w = Math.round(r.width * d), h = Math.round(r.height * d);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, d };
+  }
+  const ripples = [];
+  let prevT = null, radiusNow = 0;
+
+  function drawCircle(st, pn) {
+    const { w, h, d } = fit(cv), cxp = w / 2, cyp = h / 2, s = Math.min(w, h);
+    const rMin = s * 0.17, rMax = s * 0.43;
+    const r = Math.sqrt(rMin * rMin + st.v * (rMax * rMax - rMin * rMin)); // area tracks lung volume
+    radiusNow = r / s;
+    cx.clearRect(0, 0, w, h);
+    const tone = st.c && st.c.p >= 1 ? col.b : col.w;
+    // empty and full guide rings
+    cx.setLineDash([2 * d, 6 * d]); cx.lineWidth = d; cx.strokeStyle = rgba(col.w, .5);
+    [rMin, rMax].forEach(rr => { cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.stroke(); });
+    cx.setLineDash([]);
+    // body
+    const g = cx.createRadialGradient(cxp, cyp, r * 0.1, cxp, cyp, r);
+    g.addColorStop(0, rgba(tone, .10 + .30 * st.v)); g.addColorStop(1, rgba(tone, .22 + .25 * st.v));
+    cx.fillStyle = g; cx.beginPath(); cx.arc(cxp, cyp, r, 0, Math.PI * 2); cx.fill();
+    cx.lineWidth = 2 * d; cx.strokeStyle = rgba(tone, .9); cx.stroke();
+    // ripples from bass notes
+    for (let k = ripples.length - 1; k >= 0; k--) {
+      const rp = ripples[k], age = (pn - rp.born) / 1000, life = rp.strong ? 2.4 : 1.6;
+      if (age > life) { ripples.splice(k, 1); continue; }
+      const rr = (rp.r0 + age * (rp.strong ? 0.05 : 0.035)) * s, a = (1 - age / life) * (rp.strong ? .55 : .3);
+      cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.lineWidth = (rp.strong ? 2 : 1.2) * d; cx.strokeStyle = rgba(tone, a); cx.stroke();
+    }
+  }
+
+  function drawTrace(t) {
+    const { w, h, d } = fit(tv), pad = 10 * d, top = pad, bot = h - pad - 6 * d;
+    const t0 = t - 10, t1 = t + 20, X = x => (x - t0) / (t1 - t0) * w, Y = v => bot - v * (bot - top);
+    tx.clearRect(0, 0, w, h);
+    // bar lines
+    tx.fillStyle = rgba(col.w, .7);
+    const k0 = Math.max(0, bsearch(downbeats, t0, q => q.t));
+    for (let k = k0; k < downbeats.length && downbeats[k].t < t1; k++) {
+      const x = X(downbeats[k].t), turn = turnSet.has(downbeats[k].t) && S.mode === 'phrase';
+      tx.fillRect(x, h - pad - (turn ? 10 : 5) * d, d, (turn ? 10 : 5) * d);
+    }
+    // curve
+    const step = 2 * d; tx.beginPath();
+    for (let x = 0; x <= w; x += step) { const v = breath(t0 + x / w * (t1 - t0)).v; x === 0 ? tx.moveTo(x, Y(v)) : tx.lineTo(x, Y(v)); }
+    tx.lineWidth = 1.75 * d; tx.strokeStyle = rgba(col.b, .95); tx.stroke();
+    tx.lineTo(w, bot); tx.lineTo(0, bot); tx.closePath(); tx.fillStyle = rgba(col.b, .14); tx.fill();
+    // past dimmed
+    const xn = X(t);
+    tx.fillStyle = rgba(col.w, .12); tx.fillRect(0, 0, xn, h);
+    tx.fillStyle = col.ink; tx.fillRect(xn - d / 2, top - 4 * d, d, bot - top + 8 * d);
+    const v = breath(t).v; tx.beginPath(); tx.arc(xn, Y(v), 4 * d, 0, Math.PI * 2); tx.fill();
+  }
+
+  const fmt = s => { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; };
+  let lastText = {};
+  function setText(id, html) { if (lastText[id] !== html) { lastText[id] = html; $(id).innerHTML = html; } }
+
+  function frame(pn) {
+    const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
+    if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = LEAD; }
+    const t = clockNow(pn);
+    const st = breath(t);
+
+    // bass-note ripples: only for real forward playback, not seeks
+    if (prevT !== null && t > prevT && t - prevT < 0.3 && S.ripples) {
+      const k = bsearch(downbeats, t, q => q.t);
+      if (k >= 0 && downbeats[k].t > prevT && barAt(t)) ripples.push({ born: pn, r0: radiusNow, strong: turnSet.has(downbeats[k].t) && S.mode === 'phrase' });
+    }
+    prevT = t;
+
+    drawCircle(st, pn);
+    drawTrace(t);
+
+    // readouts
+    const word = st.phase === 'in' ? 'Breathe in' : st.phase === 'out' ? 'Breathe out' : (t < LEAD ? 'Settle in' : 'Rest');
+    setText('cueWord', word);
+    setText('cueCount', st.remain != null ? `${Math.ceil(st.remain)}` : '&nbsp;');
+    if (st.c) {
+      const L = st.c.e - st.c.i, inn = st.o - st.c.i;
+      setText('rate', (60 / L).toFixed(1));
+      setText('len', `${L.toFixed(1)} s <small>${inn.toFixed(1)} in · ${(L - inn).toFixed(1)} out</small>`);
+    } else { setText('rate', '–'); setText('len', '–'); }
+    const d = barAt(t);
+    if (d) {
+      const total = d.piece === 1 ? D.bars1.length : D.bars3.length;
+      setText('where', `No. ${d.piece} · bar ${d.bar} <small>of ${total}</small>`);
+      const bn = (d.piece === 1 ? D.bass1 : D.bass3)[d.bar - 1];
+      setText('bass', bn ? `${bn.replace('#', '♯')}` : '–');
+    } else {
+      const lead = cycles.findIndex(c => c.p === 0 && t >= c.i && t < c.e);
+      setText('where', lead >= 0 ? `Lead-in · breath ${lead + 1} <small>of 3</small>` : (t < NO1 ? 'Before the music' : 'No music'));
+      setText('bass', '–');
+    }
+    setText('section', sectionAt(t, d));
+    setText('tNow', fmt(t));
+    if (!seeking) $('seek').value = t.toFixed(1);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
