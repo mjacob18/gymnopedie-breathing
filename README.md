@@ -32,6 +32,8 @@ Then replace `__TIMELINE__` in `analysis/page_template.html` with the contents o
 
 ## Hon Shirabe version
 
+Published page: https://claude.ai/artifact/NrJP13nNcomWLEL7MMywau
+
 `hon-shirabe.html` is the same breathing guide for "Hon Shirabe (Original Tuning)", Alcvin Takegawa Ramos, *Zen Shakuhachi 1* (MP3, 4:19). The MP3 is not in this repo either.
 
 - Honkyoku has no beat. Each phrase is one exhalation by the player, ending in a fade, a pause for breath, and a sharp attack. The attacks are found from loudness alone: 17 phrases from 0:00 to the final fade at 4:10, 9.3 to 25.7 s long (14.7 s average).
