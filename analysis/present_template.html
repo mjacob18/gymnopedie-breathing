@@ -12,6 +12,7 @@
 __TOKENS__
 :root { --f-body: "Jost", "Futura", "Avenir Next", system-ui, sans-serif; --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; --breath: rgb(var(--breath-rgb)); }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; }
 .app { height: 100%; max-width: 1280px; margin: 0 auto; padding-inline: 24px; padding-block: 16px 18px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: 12px; }
@@ -41,7 +42,6 @@ button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-v
 .filebtn { position: relative; display: inline-block; }
 .filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .hint { font-size: 14px; color: var(--ink); min-width: 0; }
-.hint[hidden] { display: none; }
 .options { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; padding: 12px 14px; background: var(--surface); border-radius: 8px; font-size: 14px; }
 select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
 .check { display: flex; gap: 6px; align-items: center; }
