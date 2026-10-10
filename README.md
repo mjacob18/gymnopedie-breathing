@@ -29,3 +29,19 @@ Then replace `__TIMELINE__` in `analysis/page_template.html` with the contents o
 `analyze1.py` to `analyze4.py` are the exploratory steps: finding the gap between pieces, harmony and bass every 10 s, low-register onsets, and beat tracking.
 
 `data/bars_raw.json` holds the detected downbeats. Bars 61 to 70 of No. 3 fall in the fading final chords and are less reliable; `timeline.py` uses bars 1 to 69.
+
+## Hon Shirabe version
+
+`hon-shirabe.html` is the same breathing guide for "Hon Shirabe (Original Tuning)", Alcvin Takegawa Ramos, *Zen Shakuhachi 1* (MP3, 4:19). The MP3 is not in this repo either.
+
+- Honkyoku has no beat. Each phrase is one exhalation by the player, ending in a fade, a pause for breath, and a sharp attack. The attacks are found from loudness alone: 17 phrases from 0:00 to the final fade at 4:10, 9.3 to 25.7 s long (14.7 s average).
+- Each breath starts with the out-breath on an attack and ends with the in-breath as the note fades. By default phrases over 15 s are split into two equal breaths (23 breaths, 8.1 to 14.8 s, 5.5 per minute). "One breath per phrase" and "Steady 6 per minute" are the other modes.
+- The trace shows the flute's loudness under the breath curve.
+
+Rebuilding needs only numpy and ffmpeg:
+
+```
+python3 analysis/phrases.py path/to/recording.mp3     # writes hon_timeline.json (onsets, end, loudness envelope)
+```
+
+Then replace `__TIMELINE__` in `analysis/hon_shirabe_template.html` with the contents of `hon_timeline.json` to produce `hon-shirabe.html`. `data/hon_timeline.json` holds the current result.
