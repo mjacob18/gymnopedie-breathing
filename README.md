@@ -65,12 +65,30 @@ python3 analysis/mozart.py path/to/recording.mp3      # writes mozart_timeline.j
 
 `data/mozart_timeline.json` holds the current result.
 
+## Brahms version
+
+`present/brahms-op115.html` is a presentation page for Brahms, Clarinet Quintet in B minor, Op. 115, i. Allegro, from *Clarinet Trio and Quintet* (MP3, 12:22). The MP3 is not in this repo.
+
+- The movement is in 6/8 with a lot of rubato. The eighth-note beat drifts, so the dotted quarter (two per bar, about 1.15 s) is tracked; the exposition repeat then lands exactly 143 beats later all the way through.
+- The opening returns at 2:47 (exposition repeat), 5:32 (development, which starts with the same motto) and 8:54 (recapitulation). The last quiet chords fade out at 12:16; past the last tracked beat (11:56) the final stretch is split into equal breaths.
+- Breaths are 4 bars (8 beats, in for 2 bars, out for 2), counted from those section starts: 80 breaths of 8.1 to 10.0 s, about 6.5 per minute. "Steady 6 per minute" is the alternative.
+- Brahms's hemiolas blur the downbeats, and the accent evidence disagrees between the two copies of the exposition, so breaths are counted from the section starts rather than from detected bar lines.
+
+Rebuilding needs librosa:
+
+```
+python3 analysis/brahms.py path/to/recording.mp3      # writes brahms_timeline.json (beats, sections, end)
+```
+
+`data/brahms_timeline.json` holds the current result.
+
 ## Presentation pages
 
-`present/gymnopedie.html`, `present/hon-shirabe.html` and `present/mozart-k387.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
+`present/gymnopedie.html`, `present/hon-shirabe.html`, `present/mozart-k387.html` and `present/brahms-op115.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, Fade out, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Fade out lowers the volume over 8 s, then pauses and restores the volume for the next Play; press it again to cancel. Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
 
 - `gymnopedie.mp3`, `01 Gymnopedie No 1 & 3 --Satie.mp3`, `01_Gymnopedie_No_1_3_--Satie.mp3`, `Gymnopedie No 1 & 3 --Satie.mp3`
 - `hon-shirabe.mp3`, `01 - Hon Shirabe (Original Tuning).mp3`, `01_-_Hon_Shirabe_Original_Tuning.mp3`, `Hon Shirabe (Original Tuning).mp3`
 - `mozart.mp3`, `01 Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`, `01_Quartet_14_in_G_K.387_i_Allegro_vivace_assai.mp3`, `Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`
+- `brahms.mp3`, `05 Quintet in B Minor, Op. 115 1 Allegro.mp3`, `05_Quintet_in_B_Minor_Op._115_1_Allegro.mp3`, `Quintet in B Minor, Op. 115 1 Allegro.mp3`
 
-If none is there, choose the file under Options; the browser then remembers it. Rebuild all three with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).
+If none is there, choose the file under Options; the browser then remembers it. Rebuild them all with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).

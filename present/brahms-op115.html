@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brahms Quintet Breathing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@1,400&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Presentation layout for screen sharing: one screen, the circle fills it, the breath trace and a slim control bar below. Piece colors come from the build. */
+:root { --bg: #e8e8e9; --surface: #f3f3f4; --ink: #22211f; --muted: #5f5c57; --line: #cbcac7; --breath-rgb: 132 88 32; --wave-rgb: 146 142 134; --f-display: "Spectral", "Baskerville", "Iowan Old Style", Georgia, serif; --display-style: italic; --display-weight: 400; }
+@media (prefers-color-scheme: dark) { :root { --bg: #121211; --surface: #1b1a18; --ink: #e5e3de; --muted: #9a958c; --line: #2e2c29; --breath-rgb: 222 178 112; --wave-rgb: 108 104 96; color-scheme: dark; } }
+:root { --f-body: "Jost", "Futura", "Avenir Next", system-ui, sans-serif; --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; --breath: rgb(var(--breath-rgb)); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; }
+.app { height: 100%; max-width: 1280px; margin: 0 auto; padding-inline: 24px; padding-block: 16px 18px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: 12px; }
+
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+h1 { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(20px, 3vh, 30px); margin: 0; }
+.rate { font-family: var(--f-mono); font-size: clamp(14px, 2vh, 18px); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rate b { font-weight: 500; color: var(--ink); }
+
+.dial { position: relative; min-height: 0; }
+.dial canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cue { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.cue-word { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(24px, 5vh, 56px); line-height: 1.1; }
+.cue-count { font-family: var(--f-mono); font-size: clamp(14px, 2.4vh, 22px); color: var(--muted); margin-top: .4em; font-variant-numeric: tabular-nums; }
+
+#trace { width: 100%; height: clamp(48px, 9vh, 88px); display: block; background: var(--surface); border-radius: 6px; }
+
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.seek { flex: 1 1 260px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; }
+#seek { width: 100%; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 4px; background: var(--line); cursor: pointer; }
+#seek::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+#seek::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+button, .filebtn { font: 500 15px var(--f-body); border-radius: 999px; padding: 9px 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.primary { background: var(--breath); border-color: var(--breath); color: var(--bg); }
+#play { min-width: 92px; }
+#fadeBtn { min-width: 122px; }
+button:disabled { opacity: .4; cursor: default; }
+button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-visible { outline: 2px solid var(--breath); outline-offset: 2px; }
+.filebtn { position: relative; display: inline-block; }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.hint { font-size: 14px; color: var(--ink); min-width: 0; }
+.options { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; padding: 12px 14px; background: var(--surface); border-radius: 8px; font-size: 14px; }
+select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
+.check { display: flex; gap: 6px; align-items: center; }
+@media (max-width: 600px) { .app { padding-inline: 16px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>Brahms · Clarinet Quintet, Op. 115</h1>
+    <div class="rate" id="rate">&nbsp;</div>
+  </header>
+  <div class="dial">
+    <canvas id="circle" aria-hidden="true"></canvas>
+    <div class="cue" aria-live="polite"><div class="cue-word" id="cueWord">&nbsp;</div><div class="cue-count" id="cueCount">&nbsp;</div></div>
+  </div>
+  <canvas id="trace" aria-hidden="true"></canvas>
+  <div class="options" id="options" hidden>
+    <select id="mode" aria-label="Pacing"></select>
+    <select id="split" aria-label="Out-breath length"><option value="even">Even breath</option><option value="long">Longer out-breath</option></select>
+    <label class="check"><input type="checkbox" id="ripples" checked> Ripples</label>
+    <label class="filebtn" id="fileLabel">Choose MP3<input type="file" id="file" accept="audio/*,.mp3"></label>
+  </div>
+  <div class="bar">
+    <button id="play" type="button" class="primary">Play</button>
+    <button id="fadeBtn" type="button" disabled>Fade out</button>
+    <div class="seek"><span id="tNow">0:00</span><input type="range" id="seek" min="0" step="0.1" value="0" aria-label="Position"><span id="tEnd">0:00</span></div>
+    <span class="hint" id="hint" hidden></span>
+    <button id="optBtn" type="button" aria-expanded="false" aria-controls="options">Options</button>
+    <button id="fsBtn" type="button">Full screen</button>
+  </div>
+</main>
+
+<script id="config" type="application/json">{"key":"brahms-op115","duration":742.43,"end":735.89,"order":"in","beforeWord":"Breathe out","files":["brahms.mp3","05 Quintet in B Minor, Op. 115 1 Allegro.mp3","05_Quintet_in_B_Minor_Op._115_1_Allegro.mp3","Quintet in B Minor, Op. 115 1 Allegro.mp3"],"modes":[{"key":"four","label":"Follow the phrases (4 bars)","cycles":[[2.57,7.13,11.83,0],[11.83,16.31,20.93,0],[20.93,25.52,30.24,0],[30.24,34.86,39.38,0],[39.38,43.92,48.44,0],[48.44,52.94,57.79,0],[57.79,62.57,67.76,0],[67.76,72.54,77.07,0],[77.07,81.66,85.7,0],[85.7,90.09,94.38,0],[94.38,98.98,103.47,0],[103.47,108.16,112.83,0],[112.83,117.64,122.32,0],[122.32,127.11,131.63,0],[131.63,136.32,140.82,0],[140.82,145.35,150.23,0],[150.23,154.89,159.47,0],[159.47,161.8,167.56,0],[167.56,172.21,176.56,0],[176.56,181.08,185.54,0],[185.54,190.1,194.62,0],[194.62,199.24,203.82,0],[203.82,208.32,212.95,0],[212.95,217.5,222.09,0],[222.09,226.46,231.67,0],[231.67,236.45,240.98,0],[240.98,245.56,249.61,0],[249.61,253.99,258.28,0],[258.28,262.85,267.34,0],[267.34,272.02,276.69,0],[276.69,281.51,286.19,0],[286.19,290.98,295.51,0],[295.51,300.19,304.68,0],[304.68,309.21,314.1,0],[314.1,318.75,323.34,0],[323.34,328.02,332.49,0],[332.49,336.91,341.36,0],[341.36,345.99,350.55,0],[350.55,355.11,359.62,0],[359.62,363.95,368.43,0],[368.43,373.2,377.68,0],[377.68,382.08,386.9,0],[386.9,391.33,395.71,0],[395.71,400.3,404.92,0],[404.92,409.44,413.76,0],[413.76,418.4,423.11,0],[423.11,427.75,432.2,0],[432.2,436.95,441.47,0],[441.47,446.22,450.89,0],[450.89,455.63,460.16,0],[460.16,464.99,469.66,0],[469.66,474.12,478.68,0],[478.68,483.3,487.92,0],[487.92,492.39,496.9,0],[496.9,501.54,506.18,0],[506.18,510.86,515.47,0],[515.47,520.16,524.61,0],[524.61,529.43,533.95,0],[533.95,538.63,543.35,0],[543.35,547.94,552.3,0],[552.3,557.07,561.96,0],[561.96,566.79,571.3,0],[571.3,575.95,580.57,0],[580.57,585.05,589.75,0],[589.75,594.22,598.74,0],[598.74,603.2,608.07,0],[608.07,612.54,616.98,0],[616.98,621.71,626.08,0],[626.08,630.57,635.34,0],[635.34,639.57,644.2,0],[644.2,648.68,653.36,0],[653.36,658.08,662.59,0],[662.59,666.8,671.56,0],[671.56,676.32,681.24,0],[681.24,685.85,690.49,0],[690.49,695.17,699.77,0],[699.77,704.51,709.38,0],[709.38,713.8,718.22,0],[718.22,722.63,727.05,0],[727.05,731.47,735.89,0]]},{"key":"steady","label":"Steady 6 per minute","cycles":[[2.57,7.57,12.57,0],[12.57,17.57,22.57,0],[22.57,27.57,32.57,0],[32.57,37.57,42.57,0],[42.57,47.57,52.57,0],[52.57,57.57,62.57,0],[62.57,67.57,72.57,0],[72.57,77.57,82.57,0],[82.57,87.57,92.57,0],[92.57,97.57,102.57,0],[102.57,107.57,112.57,0],[112.57,117.57,122.57,0],[122.57,127.57,132.57,0],[132.57,137.57,142.57,0],[142.57,147.57,152.57,0],[152.57,157.57,162.57,0],[162.57,167.57,172.57,0],[172.57,177.57,182.57,0],[182.57,187.57,192.57,0],[192.57,197.57,202.57,0],[202.57,207.57,212.57,0],[212.57,217.57,222.57,0],[222.57,227.57,232.57,0],[232.57,237.57,242.57,0],[242.57,247.57,252.57,0],[252.57,257.57,262.57,0],[262.57,267.57,272.57,0],[272.57,277.57,282.57,0],[282.57,287.57,292.57,0],[292.57,297.57,302.57,0],[302.57,307.57,312.57,0],[312.57,317.57,322.57,0],[322.57,327.57,332.57,0],[332.57,337.57,342.57,0],[342.57,347.57,352.57,0],[352.57,357.57,362.57,0],[362.57,367.57,372.57,0],[372.57,377.57,382.57,0],[382.57,387.57,392.57,0],[392.57,397.57,402.57,0],[402.57,407.57,412.57,0],[412.57,417.57,422.57,0],[422.57,427.57,432.57,0],[432.57,437.57,442.57,0],[442.57,447.57,452.57,0],[452.57,457.57,462.57,0],[462.57,467.57,472.57,0],[472.57,477.57,482.57,0],[482.57,487.57,492.57,0],[492.57,497.57,502.57,0],[502.57,507.57,512.57,0],[512.57,517.57,522.57,0],[522.57,527.57,532.57,0],[532.57,537.57,542.57,0],[542.57,547.57,552.57,0],[552.57,557.57,562.57,0],[562.57,567.57,572.57,0],[572.57,577.57,582.57,0],[582.57,587.57,592.57,0],[592.57,597.57,602.57,0],[602.57,607.57,612.57,0],[612.57,617.57,622.57,0],[622.57,627.57,632.57,0],[632.57,637.57,642.57,0],[642.57,647.57,652.57,0],[652.57,657.57,662.57,0],[662.57,667.57,672.57,0],[672.57,677.57,682.57,0],[682.57,687.57,692.57,0],[692.57,697.57,702.57,0],[702.57,707.57,712.57,0],[712.57,717.57,722.57,0],[722.57,727.57,732.57,0],[732.57,737.57,742.57,0]]}],"ripples":[[2.57,1],[4.85,0],[7.13,0],[9.49,0],[11.83,1],[14.09,0],[16.31,0],[18.59,0],[20.93,1],[23.21,0],[25.52,0],[27.89,0],[30.24,1],[32.57,0],[34.86,0],[37.11,0],[39.38,1],[41.63,0],[43.92,0],[46.2,0],[48.44,1],[50.72,0],[52.94,0],[55.39,0],[57.79,1],[60.23,0],[62.57,0],[65.13,0],[67.76,1],[70.12,0],[72.54,0],[74.79,0],[77.07,1],[79.28,0],[81.66,0],[83.66,0],[85.7,1],[88.03,0],[90.09,0],[92.23,0],[94.38,1],[96.69,0],[98.98,0],[101.27,0],[103.47,1],[105.82,0],[108.16,0],[110.4,0],[112.83,1],[115.31,0],[117.64,0],[119.99,0],[122.32,1],[124.81,0],[127.11,0],[129.36,0],[131.63,1],[134.01,0],[136.32,0],[138.6,0],[140.82,1],[143.1,0],[145.35,0],[147.83,0],[150.23,1],[152.57,0],[154.89,0],[157.19,0],[159.47,1],[161.8,0],[164.13,0],[166.35,0],[167.56,1],[169.9,0],[172.21,0],[174.39,0],[176.56,1],[178.82,0],[181.08,0],[183.24,0],[185.54,1],[187.78,0],[190.1,0],[192.34,0],[194.62,1],[196.92,0],[199.24,0],[201.54,0],[203.82,1],[206.04,0],[208.32,0],[210.65,0],[212.95,1],[215.27,0],[217.5,0],[219.81,0],[222.09,1],[224.35,0],[226.46,0],[229.02,0],[231.67,1],[234.02,0],[236.45,0],[238.7,0],[240.98,1],[243.21,0],[245.56,0],[247.57,0],[249.61,1],[251.92,0],[253.99,0],[256.14,0],[258.28,1],[260.57,0],[262.85,0],[265.14,0],[267.34,1],[269.7,0],[272.02,0],[274.29,0],[276.69,1],[279.2,0],[281.51,0],[283.85,0],[286.19,1],[288.67,0],[290.98,0],[293.23,0],[295.51,1],[297.89,0],[300.19,0],[302.46,0],[304.68,1],[306.97,0],[309.21,0],[311.7,0],[314.1,1],[316.44,0],[318.75,0],[321.06,0],[323.34,1],[325.67,0],[328.02,0],[330.23,0],[332.49,1],[334.77,0],[336.91,0],[339.12,0],[341.36,1],[343.68,0],[345.99,0],[348.26,0],[350.55,1],[352.83,0],[355.11,0],[357.38,0],[359.62,1],[361.8,0],[363.95,0],[366.18,0],[368.43,1],[370.69,0],[373.2,0],[375.5,0],[377.68,1],[379.96,0],[382.08,0],[384.48,0],[386.9,1],[389.18,0],[391.33,0],[393.52,0],[395.71,1],[398.08,0],[400.3,0],[402.49,0],[404.92,1],[407.32,0],[409.44,0],[411.6,0],[413.76,1],[416.07,0],[418.4,0],[420.78,0],[423.11,1],[425.38,0],[427.75,0],[430.03,0],[432.2,1],[434.52,0],[436.95,0],[439.21,0],[441.47,1],[443.86,0],[446.22,0],[448.49,0],[450.89,1],[453.2,0],[455.63,0],[457.87,0],[460.16,1],[462.59,0],[464.99,0],[467.37,0],[469.66,1],[471.83,0],[474.12,0],[476.42,0],[478.68,1],[481.01,0],[483.3,0],[485.6,0],[487.92,1],[490.18,0],[492.39,0],[494.63,0],[496.9,1],[499.23,0],[501.54,0],[503.8,0],[506.18,1],[508.54,0],[510.86,0],[513.18,0],[515.47,1],[517.8,0],[520.16,0],[522.4,0],[524.61,1],[527.01,0],[529.43,0],[531.67,0],[533.95,1],[536.32,0],[538.63,0],[540.97,0],[543.35,1],[545.59,0],[547.94,0],[550.07,0],[552.3,1],[554.5,0],[557.07,0],[559.68,0],[561.96,1],[564.23,0],[566.79,0],[569.1,0],[571.3,1],[573.66,0],[575.95,0],[578.22,0],[580.57,1],[582.79,0],[585.05,0],[587.46,0],[589.75,1],[591.92,0],[594.22,0],[596.49,0],[598.74,1],[600.98,0],[603.2,0],[605.62,0],[608.07,1],[610.36,0],[612.54,0],[614.79,0],[616.98,1],[619.31,0],[621.71,0],[623.87,0],[626.08,1],[628.19,0],[630.57,0],[633.01,0],[635.34,1],[637.43,0],[639.57,0],[641.87,0],[644.2,1],[646.44,0],[648.68,0],[651.02,0],[653.36,1],[655.74,0],[658.08,0],[660.26,0],[662.59,1],[664.61,0],[666.8,0],[669.21,0],[671.56,1],[673.84,0],[676.32,0],[678.89,0],[681.24,1],[683.47,0],[685.85,0],[688.19,0],[690.49,1],[692.8,0],[695.17,0],[697.53,0],[699.77,1],[702.08,0],[704.51,0],[706.91,0],[709.38,1],[711.7,0],[713.91,0],[716.17,0]],"ticks":[[2.57,1],[4.85,0],[7.13,0],[9.49,0],[11.83,1],[14.09,0],[16.31,0],[18.59,0],[20.93,1],[23.21,0],[25.52,0],[27.89,0],[30.24,1],[32.57,0],[34.86,0],[37.11,0],[39.38,1],[41.63,0],[43.92,0],[46.2,0],[48.44,1],[50.72,0],[52.94,0],[55.39,0],[57.79,1],[60.23,0],[62.57,0],[65.13,0],[67.76,1],[70.12,0],[72.54,0],[74.79,0],[77.07,1],[79.28,0],[81.66,0],[83.66,0],[85.7,1],[88.03,0],[90.09,0],[92.23,0],[94.38,1],[96.69,0],[98.98,0],[101.27,0],[103.47,1],[105.82,0],[108.16,0],[110.4,0],[112.83,1],[115.31,0],[117.64,0],[119.99,0],[122.32,1],[124.81,0],[127.11,0],[129.36,0],[131.63,1],[134.01,0],[136.32,0],[138.6,0],[140.82,1],[143.1,0],[145.35,0],[147.83,0],[150.23,1],[152.57,0],[154.89,0],[157.19,0],[159.47,1],[161.8,0],[164.13,0],[166.35,0],[167.56,1],[169.9,0],[172.21,0],[174.39,0],[176.56,1],[178.82,0],[181.08,0],[183.24,0],[185.54,1],[187.78,0],[190.1,0],[192.34,0],[194.62,1],[196.92,0],[199.24,0],[201.54,0],[203.82,1],[206.04,0],[208.32,0],[210.65,0],[212.95,1],[215.27,0],[217.5,0],[219.81,0],[222.09,1],[224.35,0],[226.46,0],[229.02,0],[231.67,1],[234.02,0],[236.45,0],[238.7,0],[240.98,1],[243.21,0],[245.56,0],[247.57,0],[249.61,1],[251.92,0],[253.99,0],[256.14,0],[258.28,1],[260.57,0],[262.85,0],[265.14,0],[267.34,1],[269.7,0],[272.02,0],[274.29,0],[276.69,1],[279.2,0],[281.51,0],[283.85,0],[286.19,1],[288.67,0],[290.98,0],[293.23,0],[295.51,1],[297.89,0],[300.19,0],[302.46,0],[304.68,1],[306.97,0],[309.21,0],[311.7,0],[314.1,1],[316.44,0],[318.75,0],[321.06,0],[323.34,1],[325.67,0],[328.02,0],[330.23,0],[332.49,1],[334.77,0],[336.91,0],[339.12,0],[341.36,1],[343.68,0],[345.99,0],[348.26,0],[350.55,1],[352.83,0],[355.11,0],[357.38,0],[359.62,1],[361.8,0],[363.95,0],[366.18,0],[368.43,1],[370.69,0],[373.2,0],[375.5,0],[377.68,1],[379.96,0],[382.08,0],[384.48,0],[386.9,1],[389.18,0],[391.33,0],[393.52,0],[395.71,1],[398.08,0],[400.3,0],[402.49,0],[404.92,1],[407.32,0],[409.44,0],[411.6,0],[413.76,1],[416.07,0],[418.4,0],[420.78,0],[423.11,1],[425.38,0],[427.75,0],[430.03,0],[432.2,1],[434.52,0],[436.95,0],[439.21,0],[441.47,1],[443.86,0],[446.22,0],[448.49,0],[450.89,1],[453.2,0],[455.63,0],[457.87,0],[460.16,1],[462.59,0],[464.99,0],[467.37,0],[469.66,1],[471.83,0],[474.12,0],[476.42,0],[478.68,1],[481.01,0],[483.3,0],[485.6,0],[487.92,1],[490.18,0],[492.39,0],[494.63,0],[496.9,1],[499.23,0],[501.54,0],[503.8,0],[506.18,1],[508.54,0],[510.86,0],[513.18,0],[515.47,1],[517.8,0],[520.16,0],[522.4,0],[524.61,1],[527.01,0],[529.43,0],[531.67,0],[533.95,1],[536.32,0],[538.63,0],[540.97,0],[543.35,1],[545.59,0],[547.94,0],[550.07,0],[552.3,1],[554.5,0],[557.07,0],[559.68,0],[561.96,1],[564.23,0],[566.79,0],[569.1,0],[571.3,1],[573.66,0],[575.95,0],[578.22,0],[580.57,1],[582.79,0],[585.05,0],[587.46,0],[589.75,1],[591.92,0],[594.22,0],[596.49,0],[598.74,1],[600.98,0],[603.2,0],[605.62,0],[608.07,1],[610.36,0],[612.54,0],[614.79,0],[616.98,1],[619.31,0],[621.71,0],[623.87,0],[626.08,1],[628.19,0],[630.57,0],[633.01,0],[635.34,1],[637.43,0],[639.57,0],[641.87,0],[644.2,1],[646.44,0],[648.68,0],[651.02,0],[653.36,1],[655.74,0],[658.08,0],[660.26,0],[662.59,1],[664.61,0],[666.8,0],[669.21,0],[671.56,1],[673.84,0],[676.32,0],[678.89,0],[681.24,1],[683.47,0],[685.85,0],[688.19,0],[690.49,1],[692.8,0],[695.17,0],[697.53,0],[699.77,1],[702.08,0],[704.51,0],[706.91,0],[709.38,1],[711.7,0],[713.91,0],[716.17,0]],"bands":[[0,2.57,"n"],[2.57,167.56,"a"],[167.56,332.49,"b"],[332.49,533.95,"w"],[533.95,735.89,"a"],[735.89,742.43,"n"]],"env":null,"envStep":null}</script>
+<script>
+(() => {
+  const C = JSON.parse(document.getElementById('config').textContent);
+  const $ = id => document.getElementById(id);
+  const DUR = C.duration, END = C.end, OUT_FIRST = C.order === 'out';
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- options (remembered when storage is available)
+  const store = { get(k) { try { return localStorage.getItem(C.key + '.' + k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(C.key + '.' + k, v); } catch {} } };
+  C.modes.forEach(m => $('mode').add(new Option(m.label, m.key)));
+  const S = { mode: store.get('mode') || C.modes[0].key, split: store.get('split') || 'even', ripples: store.get('ripples') !== '0' && !reduceMotion };
+  if (!C.modes.some(m => m.key === S.mode)) S.mode = C.modes[0].key;
+  $('mode').value = S.mode; $('split').value = S.split; $('ripples').checked = S.ripples;
+  let cycles = C.modes.find(m => m.key === S.mode).cycles;
+  $('mode').onchange = e => { S.mode = e.target.value; store.set('mode', S.mode); cycles = C.modes.find(m => m.key === S.mode).cycles; };
+  $('split').onchange = e => { S.split = e.target.value; store.set('split', S.split); };
+  $('ripples').onchange = e => { S.ripples = e.target.checked; store.set('ripples', S.ripples ? '1' : '0'); };
+  $('optBtn').onclick = () => { const o = $('options'); o.hidden = !o.hidden; $('optBtn').setAttribute('aria-expanded', String(!o.hidden)); };
+
+  // ---- breath model. A cycle is [start, turn, end, wave]: the turn splits it evenly (or on the music); "longer out-breath" gives the out-breath 60%.
+  function bsearch(arr, t, key) { let lo = 0, hi = arr.length - 1, ans = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (key(arr[m]) <= t) { ans = m; lo = m + 1; } else hi = m - 1; } return ans; }
+  function breath(t) {
+    const k = bsearch(cycles, t, c => c[0]);
+    if (k < 0) return { v: OUT_FIRST ? 1 : 0, phase: 'before' };
+    const [i, turn, e, wave] = cycles[k];
+    if (t >= e || t >= END) return { v: 0, phase: 'rest' };
+    const o = S.split === 'long' ? i + (OUT_FIRST ? 0.6 : 0.4) * (e - i) : turn;
+    const first = t < o, p = first ? (t - i) / (o - i) : (t - o) / (e - o);
+    const rising = first !== OUT_FIRST;   // in-breath
+    return { v: rising ? (1 - Math.cos(Math.PI * p)) / 2 : (1 + Math.cos(Math.PI * p)) / 2, phase: rising ? 'in' : 'out', len: e - i, wave, remain: (first ? o : e) - t };
+  }
+  const envAt = t => { const v = C.env ? C.env[Math.floor(t / C.envStep)] : null; return v == null ? 0 : Math.max(0, (v + 60) / 60); };
+
+  // ---- clock: audio when loaded, otherwise a silent preview clock
+  const audio = new Audio(); audio.preload = 'auto';
+  let hasAudio = false, vPlaying = false, vT = 0, anchorA = 0, anchorP = 0, lastSeen = -1, lastFrame = performance.now();
+  function reanchor() { anchorA = audio.currentTime; anchorP = performance.now(); lastSeen = audio.currentTime; }
+  function clockNow(pn) {
+    if (!hasAudio) return vT;
+    if (audio.paused) return audio.currentTime;
+    const ct = audio.currentTime, est = anchorA + (pn - anchorP) / 1000 * audio.playbackRate;
+    if (ct !== lastSeen) { lastSeen = ct; if (Math.abs(est - ct) > 0.08) { anchorA = ct; anchorP = pn; return ct; } }
+    return est;
+  }
+  ['play', 'seeked', 'playing', 'ratechange'].forEach(ev => audio.addEventListener(ev, reanchor));
+  ['play', 'pause', 'ended'].forEach(ev => audio.addEventListener(ev, updatePlayBtn));
+
+  function hint(msg) { $('hint').textContent = msg || ''; $('hint').hidden = !msg; }
+  // Try each source in turn; resolve with the first that the browser can play.
+  function trySource(src) {
+    return new Promise((res, rej) => {
+      const done = ok => { audio.onloadedmetadata = audio.onerror = null; ok ? res() : rej(); };
+      audio.onloadedmetadata = () => done(true); audio.onerror = () => done(false);
+      audio.src = src;
+    });
+  }
+  function loaded(name) {
+    hasAudio = true; vPlaying = false;
+    audio.currentTime = Math.min(Math.max(vT, 0), audio.duration - 1);
+    hint(Math.abs(audio.duration - DUR) > 2 ? `“${name}” is ${fmt(audio.duration)}, not ${fmt(DUR)}: timing won't match.` : '');
+    updatePlayBtn();
+  }
+  async function findBesideThisPage() {
+    for (const name of C.files) {
+      try { await trySource(encodeURIComponent(name)); loaded(name); return true; } catch {}
+    }
+    return false;
+  }
+
+  // a chosen file is kept in this browser, in case the MP3 is not beside the page
+  const saved = (() => {
+    let db;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('gymnopedie-breathing', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('audio');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const run = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('audio', mode), q = fn(t.objectStore('audio'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error);
+    }));
+    return { get: () => run('readonly', s => s.get(C.key)), put: f => run('readwrite', s => s.put(f, C.key)) };
+  })();
+  async function useFile(f, fromSaved) {
+    if (!f) return;
+    if (audio.src.startsWith('blob:')) URL.revokeObjectURL(audio.src);
+    try { await trySource(URL.createObjectURL(f)); } catch { hint(`Can't play “${f.name}”. Try an MP3.`); return; }
+    loaded(f.name);
+    if (!fromSaved) saved.put(f).catch(() => {});
+  }
+  $('file').addEventListener('change', e => useFile(e.target.files[0]));
+  addEventListener('dragover', e => e.preventDefault());
+  addEventListener('drop', e => { e.preventDefault(); useFile(e.dataTransfer.files[0]); });
+
+  (async () => {
+    if (await findBesideThisPage()) return;
+    try { const f = await saved.get(); if (f && !hasAudio) { await useFile(f, true); if (hasAudio) return; } } catch {}
+    hint(`Put “${C.files[0]}” in this page's folder, or choose it in Options.`);
+  })();
+
+  // ---- transport
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try { if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); } else if (!on && wakeLock) { await wakeLock.release(); } } catch {}
+  }
+  function playing() { return hasAudio ? !audio.paused && !audio.ended : vPlaying; }
+  function togglePlay() {
+    stopFade(true);
+    if (hasAudio) { if (audio.paused) audio.play().catch(() => hint('The browser blocked playback. Press Play again.')); else audio.pause(); }
+    else vPlaying = !vPlaying;
+    updatePlayBtn();
+  }
+  function updatePlayBtn() { const on = playing(); $('play').textContent = on ? 'Pause' : 'Play'; $('fadeBtn').disabled = !on && !fade; keepAwake(on); }
+
+  // fade out: lower the volume over FADE seconds, then pause and put the volume back for the next Play
+  const FADE = 8;
+  let fade = null;
+  function stopFade(restore) {
+    if (!fade) return;
+    cancelAnimationFrame(fade.raf); fade = null;
+    if (restore) audio.volume = 1;
+    $('fadeBtn').textContent = 'Fade out';
+  }
+  function fadeOut() {
+    if (fade) { stopFade(true); updatePlayBtn(); return; }
+    if (!playing()) return;
+    const t0 = performance.now();
+    $('fadeBtn').textContent = 'Cancel fade';
+    const step = now => {
+      const p = Math.min(1, (now - t0) / 1000 / FADE);
+      audio.volume = (1 - p) ** 2;
+      if (p < 1) { fade.raf = requestAnimationFrame(step); return; }
+      stopFade(false);
+      if (hasAudio) audio.pause(); else vPlaying = false;
+      audio.volume = 1;
+      updatePlayBtn();
+    };
+    fade = { raf: requestAnimationFrame(step) };
+  }
+  function toggleFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el)?.catch?.(() => {});
+  }
+  $('play').onclick = togglePlay;
+  $('fadeBtn').onclick = fadeOut;
+  $('fsBtn').onclick = toggleFullscreen;
+  document.addEventListener('fullscreenchange', () => { $('fsBtn').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
+  addEventListener('keydown', e => {
+    if (/SELECT|BUTTON|TEXTAREA/.test(e.target.tagName) || (e.target.tagName === 'INPUT' && e.target.type !== 'range')) return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  });
+  let seeking = false;
+  $('seek').max = DUR; $('tEnd').textContent = fmt(Math.round(DUR));
+  $('seek').addEventListener('input', e => { seeking = true; const t = +e.target.value; if (hasAudio) audio.currentTime = t; else vT = t; ripples.length = 0; });
+  $('seek').addEventListener('change', () => { seeking = false; });
+  (function paintSeek() {
+    const pc = t => (t / DUR * 100).toFixed(2) + '%';
+    const color = { a: 'var(--breath)', b: 'rgb(var(--breath-rgb) / .5)', w: 'rgb(var(--wave-rgb) / .55)', n: 'var(--line)' };
+    $('seek').style.background = `linear-gradient(90deg, ${C.bands.map(([a, b, k]) => `${color[k]} ${pc(a)} ${pc(b)}`).join(', ')})`;
+  })();
+
+  // ---- drawing
+  const cv = $('circle'), cx = cv.getContext('2d'), tv = $('trace'), tx = tv.getContext('2d');
+  let col = {};
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    col = { b: cs.getPropertyValue('--breath-rgb').trim(), w: cs.getPropertyValue('--wave-rgb').trim(), ink: cs.getPropertyValue('--ink').trim() };
+  }
+  readTokens();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens);
+  const rgba = (rgb, a) => `rgb(${rgb} / ${a})`;
+  function fit(c) {
+    const r = c.getBoundingClientRect(), d = devicePixelRatio || 1;
+    const w = Math.round(r.width * d), h = Math.round(r.height * d);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, d };
+  }
+  const ripples = [];
+  let prevT = null, radiusNow = 0;
+
+  function drawCircle(st, pn) {
+    const { w, h, d } = fit(cv), cxp = w / 2, cyp = h / 2, s = Math.min(w, h);
+    const rMin = s * 0.2, rMax = s * 0.47;
+    const r = Math.sqrt(rMin * rMin + st.v * (rMax * rMax - rMin * rMin)); // area tracks lung volume
+    radiusNow = r / s;
+    cx.clearRect(0, 0, w, h);
+    const tone = st.phase === 'in' || st.phase === 'out' ? (st.wave ? col.w : col.b) : col.w;
+    cx.setLineDash([2 * d, 6 * d]); cx.lineWidth = d; cx.strokeStyle = rgba(col.w, .5);
+    [rMin, rMax].forEach(rr => { cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.stroke(); });
+    cx.setLineDash([]);
+    const g = cx.createRadialGradient(cxp, cyp, r * 0.1, cxp, cyp, r);
+    g.addColorStop(0, rgba(tone, .10 + .30 * st.v)); g.addColorStop(1, rgba(tone, .22 + .25 * st.v));
+    cx.fillStyle = g; cx.beginPath(); cx.arc(cxp, cyp, r, 0, Math.PI * 2); cx.fill();
+    cx.lineWidth = 2 * d; cx.strokeStyle = rgba(tone, .9); cx.stroke();
+    for (let k = ripples.length - 1; k >= 0; k--) {
+      const rp = ripples[k], age = (pn - rp.born) / 1000, life = rp.strong ? 2.6 : 1.6;
+      if (age > life) { ripples.splice(k, 1); continue; }
+      const rr = (rp.r0 + age * (rp.strong ? 0.05 : 0.035)) * s, a = (1 - age / life) * (rp.strong ? .55 : .3);
+      cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.lineWidth = (rp.strong ? 2 : 1.2) * d; cx.strokeStyle = rgba(tone, a); cx.stroke();
+    }
+  }
+
+  function drawTrace(t) {
+    const { w, h, d } = fit(tv), pad = 8 * d, top = pad, bot = h - pad - 4 * d;
+    const t0 = t - 10, t1 = t + 20, X = x => (x - t0) / (t1 - t0) * w, Y = v => bot - v * (bot - top);
+    const step = 2 * d, at = x => t0 + x / w * (t1 - t0);
+    tx.clearRect(0, 0, w, h);
+    if (C.env) {
+      tx.beginPath(); tx.moveTo(0, bot);
+      for (let x = 0; x <= w; x += step) tx.lineTo(x, Y(envAt(at(x)) * 0.95));
+      tx.lineTo(w, bot); tx.closePath(); tx.fillStyle = rgba(col.w, .38); tx.fill();
+    }
+    tx.fillStyle = rgba(col.w, .8);
+    for (let k = Math.max(0, bsearch(C.ticks, t0, q => q[0])); k < C.ticks.length && C.ticks[k][0] < t1; k++) {
+      const tall = C.ticks[k][1] && S.mode !== 'steady';
+      tx.fillRect(X(C.ticks[k][0]), h - pad - (tall ? 10 : 5) * d, d, (tall ? 10 : 5) * d);
+    }
+    tx.beginPath();
+    for (let x = 0; x <= w; x += step) { const v = breath(at(x)).v; x === 0 ? tx.moveTo(x, Y(v)) : tx.lineTo(x, Y(v)); }
+    tx.lineWidth = 1.75 * d; tx.strokeStyle = rgba(col.b, .95); tx.stroke();
+    if (!C.env) { tx.lineTo(w, bot); tx.lineTo(0, bot); tx.closePath(); tx.fillStyle = rgba(col.b, .14); tx.fill(); }
+    const xn = X(t);
+    tx.fillStyle = rgba(col.w, .12); tx.fillRect(0, 0, xn, h);
+    tx.fillStyle = col.ink; tx.fillRect(xn - d / 2, top - 4 * d, d, bot - top + 8 * d);
+    tx.beginPath(); tx.arc(xn, Y(breath(t).v), 4 * d, 0, Math.PI * 2); tx.fill();
+  }
+
+  function fmt(s) { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; }
+  const lastText = {};
+  function setText(id, html) { if (lastText[id] !== html) { lastText[id] = html; $(id).innerHTML = html; } }
+
+  function frame(pn) {
+    const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
+    if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = 0; }
+    const t = clockNow(pn), st = breath(t);
+    if (prevT !== null && t > prevT && t - prevT < 0.3 && S.ripples && t < END) {
+      const k = bsearch(C.ripples, t, q => q[0]);
+      if (k >= 0 && C.ripples[k][0] > prevT) ripples.push({ born: pn, r0: radiusNow, strong: !!C.ripples[k][1] && S.mode !== 'steady' });
+    }
+    prevT = t;
+    drawCircle(st, pn);
+    drawTrace(t);
+    // at the very start of an out-first piece, ask for a full breath before Play
+    const ready = OUT_FIRST && t < 0.05 && !playing();
+    const word = ready || st.phase === 'before' ? C.beforeWord : st.phase === 'in' ? 'Breathe in' : st.phase === 'out' ? 'Breathe out' : 'Rest';
+    setText('cueWord', word);
+    setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
+    setText('rate', st.len ? `<b>${(60 / st.len).toFixed(1)}</b> breaths / min` : '&nbsp;');
+    setText('tNow', fmt(t));
+    if (!seeking) $('seek').value = t.toFixed(1);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

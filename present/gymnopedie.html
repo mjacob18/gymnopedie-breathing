@@ -39,6 +39,8 @@ h1 { font-family: var(--f-display); font-style: var(--display-style); font-weigh
 button, .filebtn { font: 500 15px var(--f-body); border-radius: 999px; padding: 9px 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
 .primary { background: var(--breath); border-color: var(--breath); color: var(--bg); }
 #play { min-width: 92px; }
+#fadeBtn { min-width: 122px; }
+button:disabled { opacity: .4; cursor: default; }
 button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-visible { outline: 2px solid var(--breath); outline-offset: 2px; }
 .filebtn { position: relative; display: inline-block; }
 .filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -68,6 +70,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   </div>
   <div class="bar">
     <button id="play" type="button" class="primary">Play</button>
+    <button id="fadeBtn" type="button" disabled>Fade out</button>
     <div class="seek"><span id="tNow">0:00</span><input type="range" id="seek" min="0" step="0.1" value="0" aria-label="Position"><span id="tEnd">0:00</span></div>
     <span class="hint" id="hint" hidden></span>
     <button id="optBtn" type="button" aria-expanded="false" aria-controls="options">Options</button>
@@ -183,17 +186,45 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   }
   function playing() { return hasAudio ? !audio.paused && !audio.ended : vPlaying; }
   function togglePlay() {
+    stopFade(true);
     if (hasAudio) { if (audio.paused) audio.play().catch(() => hint('The browser blocked playback. Press Play again.')); else audio.pause(); }
     else vPlaying = !vPlaying;
     updatePlayBtn();
   }
-  function updatePlayBtn() { const on = playing(); $('play').textContent = on ? 'Pause' : 'Play'; keepAwake(on); }
+  function updatePlayBtn() { const on = playing(); $('play').textContent = on ? 'Pause' : 'Play'; $('fadeBtn').disabled = !on && !fade; keepAwake(on); }
+
+  // fade out: lower the volume over FADE seconds, then pause and put the volume back for the next Play
+  const FADE = 8;
+  let fade = null;
+  function stopFade(restore) {
+    if (!fade) return;
+    cancelAnimationFrame(fade.raf); fade = null;
+    if (restore) audio.volume = 1;
+    $('fadeBtn').textContent = 'Fade out';
+  }
+  function fadeOut() {
+    if (fade) { stopFade(true); updatePlayBtn(); return; }
+    if (!playing()) return;
+    const t0 = performance.now();
+    $('fadeBtn').textContent = 'Cancel fade';
+    const step = now => {
+      const p = Math.min(1, (now - t0) / 1000 / FADE);
+      audio.volume = (1 - p) ** 2;
+      if (p < 1) { fade.raf = requestAnimationFrame(step); return; }
+      stopFade(false);
+      if (hasAudio) audio.pause(); else vPlaying = false;
+      audio.volume = 1;
+      updatePlayBtn();
+    };
+    fade = { raf: requestAnimationFrame(step) };
+  }
   function toggleFullscreen() {
     const el = document.documentElement;
     if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     else (el.requestFullscreen || el.webkitRequestFullscreen).call(el)?.catch?.(() => {});
   }
   $('play').onclick = togglePlay;
+  $('fadeBtn').onclick = fadeOut;
   $('fsBtn').onclick = toggleFullscreen;
   document.addEventListener('fullscreenchange', () => { $('fsBtn').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
   addEventListener('keydown', e => {
