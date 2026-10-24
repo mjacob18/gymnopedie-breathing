@@ -48,11 +48,29 @@ python3 analysis/phrases.py path/to/recording.mp3     # writes hon_timeline.json
 
 Then replace `__TIMELINE__` in `analysis/hon_shirabe_template.html` with the contents of `hon_timeline.json` to produce `hon-shirabe.html`. `data/hon_timeline.json` holds the current result.
 
+## Mozart version
+
+`present/mozart-k387.html` is a presentation page (see below) for Mozart, String Quartet No. 14 in G, K. 387, i. Allegro vivace assai, from *The Haydn Quartets*, Disc 1 (MP3, 7:28). The MP3 is not in this repo.
+
+- The quarter-note beat runs at about 129 per minute, so 4 bars last about 7.4 s.
+- The sections come from harmony: the opening recurs exactly 225 beats later (exposition repeat, 1:46), the development starts at 3:33, and the opening returns at 5:19 (recapitulation). The movement ends at 7:21.
+- Breaths are 4 bars (in for 2, out for 2), counted from the start of each section; a leftover bar or beat at a section's end joins its last breath. That gives 58 breaths of 7.2 to 8.9 s, about 8 per minute. "Slower (8 bars)" gives about 4 per minute and "Steady 6 per minute" an exact 10 s cycle.
+- The accent pattern inside each section was too weak to confirm every downbeat, so breaths are counted from the section starts, which are clear.
+
+Rebuilding needs librosa:
+
+```
+python3 analysis/mozart.py path/to/recording.mp3      # writes mozart_timeline.json (beats, sections, end)
+```
+
+`data/mozart_timeline.json` holds the current result.
+
 ## Presentation pages
 
-`present/gymnopedie.html` and `present/hon-shirabe.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
+`present/gymnopedie.html`, `present/hon-shirabe.html` and `present/mozart-k387.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
 
 - `gymnopedie.mp3`, `01 Gymnopedie No 1 & 3 --Satie.mp3`, `01_Gymnopedie_No_1_3_--Satie.mp3`, `Gymnopedie No 1 & 3 --Satie.mp3`
 - `hon-shirabe.mp3`, `01 - Hon Shirabe (Original Tuning).mp3`, `01_-_Hon_Shirabe_Original_Tuning.mp3`, `Hon Shirabe (Original Tuning).mp3`
+- `mozart.mp3`, `01 Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`, `01_Quartet_14_in_G_K.387_i_Allegro_vivace_assai.mp3`, `Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`
 
-If none is there, choose the file under Options; the browser then remembers it. Rebuild both with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the two timelines in `data/`).
+If none is there, choose the file under Options; the browser then remembers it. Rebuild all three with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).

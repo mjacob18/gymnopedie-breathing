@@ -1,7 +1,7 @@
 """Build the standalone presentation pages: python3 analysis/build_present.py (from the repo root).
 
-Reads data/timeline.json (Satie) and data/hon_timeline.json (Hon Shirabe), fills analysis/present_template.html,
-and writes present/gymnopedie.html and present/hon-shirabe.html. Each page plays the MP3 sitting beside it.
+Reads data/timeline.json (Satie), data/hon_timeline.json (Hon Shirabe) and data/mozart_timeline.json (Mozart K. 387), fills analysis/present_template.html,
+and writes present/gymnopedie.html, present/hon-shirabe.html and present/mozart-k387.html. Each page plays the MP3 sitting beside it.
 """
 import json, math, os
 
@@ -58,9 +58,46 @@ def hon():
                     light='--bg: #e9ebe4; --surface: #f3f4ef; --ink: #1f2420; --muted: #5b6459; --line: #c8cdc2; --breath-rgb: 86 108 70; --wave-rgb: 138 148 132;',
                     dark='--bg: #10130f; --surface: #171b16; --ink: #dfe3d8; --muted: #8d9787; --line: #283026; --breath-rgb: 168 192 140; --wave-rgb: 96 108 92;'))
 
+def mozart():
+    D = json.load(open('data/mozart_timeline.json'))
+    bt, end, dur = D['beats'], D['end'], D['duration']
+    starts = [k for _, k in D['sections']] + [len(bt)]
+    t = lambda k: bt[k] if k < len(bt) else end
+    def groups(size):
+        # breaths of `size` beats counted from each section start; a short remainder joins the section's last breath,
+        # and the turn falls on a bar line at or before the middle
+        out = []
+        for a, b in zip(starts, starts[1:]):
+            ks = list(range(a, b, size))
+            if len(ks) > 1 and b - ks[-1] < size / 2: ks.pop()
+            for i, k in enumerate(ks):
+                e = ks[i + 1] if i + 1 < len(ks) else b
+                out.append([t(k), t(k + max(4, (e - k) // 8 * 4)), t(e), 0])
+        return out
+    four = groups(16)
+    turns = {c[0] for c in four}
+    bars = [bt[k] for a, b in zip(starts, starts[1:]) for k in range(a, b, 4)]
+    steady = [[R2(bt[0] + i), R2(bt[0] + i + 5), R2(bt[0] + i + 10), 0] for i in range(0, math.ceil(end - bt[0]), 10)]
+    rep, dev, recap = (t(k) for _, k in D['sections'][1:])
+    return dict(
+        title='Mozart Quartet Breathing', heading='Mozart · Quartet in G, K. 387', key='mozart-k387', duration=dur, end=end,
+        order='in', beforeWord='Breathe out',
+        files=['mozart.mp3', '01 Quartet 14 in G, K.387, i) Allegro vivace assai.mp3', '01_Quartet_14_in_G_K.387_i_Allegro_vivace_assai.mp3',
+               'Quartet 14 in G, K.387, i) Allegro vivace assai.mp3'],
+        modes=[dict(key='four', label='Follow the phrases (4 bars)', cycles=four),
+               dict(key='eight', label='Slower (8 bars)', cycles=groups(32)),
+               dict(key='steady', label='Steady 6 per minute', cycles=steady)],
+        ripples=[[x, int(x in turns)] for x in bars], ticks=[[x, int(x in turns)] for x in bars],
+        bands=[[0, bt[0], 'n'], [bt[0], rep, 'a'], [rep, dev, 'b'], [dev, recap, 'w'], [recap, end, 'a'], [end, dur, 'n']],
+        env=None, envStep=None,
+        fonts='https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
+        tokens=dict(display='"Cormorant Garamond", "Garamond", "Iowan Old Style", Georgia, serif', style='italic', weight=500,
+                    light='--bg: #ebe8ec; --surface: #f5f3f6; --ink: #241d26; --muted: #625866; --line: #cec7d0; --breath-rgb: 122 52 78; --wave-rgb: 150 138 152;',
+                    dark='--bg: #141015; --surface: #1c171d; --ink: #e6dfe7; --muted: #9a8f9c; --line: #302832; --breath-rgb: 214 150 172; --wave-rgb: 112 100 116;'))
+
 tpl = open('analysis/present_template.html').read()
 os.makedirs('present', exist_ok=True)
-for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon())):
+for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart())):
     T = P.pop('tokens')
     tokens = (f":root {{ {T['light']} --f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']}; }}\n"
               f"@media (prefers-color-scheme: dark) {{ :root {{ {T['dark']} color-scheme: dark; }} }}")
