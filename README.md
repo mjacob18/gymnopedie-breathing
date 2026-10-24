@@ -82,13 +82,29 @@ python3 analysis/brahms.py path/to/recording.mp3      # writes brahms_timeline.j
 
 `data/brahms_timeline.json` holds the current result.
 
+## Bach version
+
+`present/bach-bwv1007.html` is a presentation page for Bach, Cello Suite No. 1 in G, BWV 1007, Prelude, played by Yo-Yo Ma (*Classic Yo-Yo*, M4A, 2:25). The recording is not in this repo.
+
+- The Prelude is 42 bars of running sixteenths with one harmony per bar. Exactly 42 bar starts are fitted from the first note (0:03) to the final chord (2:10), at harmony changes and low-string attacks, preferring even bar lengths. Bars run 2.4 to 3.8 s (3.0 s median). As a check, the harmony changes about 2.5 times as much at the fitted bar lines as at mid-bar points, and more at the bar line in 78% of bars; the exceptions sit mostly in bars 32 to 39, over the held D pedal.
+- Default breathing is in for 1 bar, out for 2 (14 breaths, about 6.3 per minute), so every turn falls on a bar line. "Slower: 4 bars" (in 2, out 2; about 5 per minute) and "Steady 6 per minute" are the alternatives. The last breath runs out over the final chord, which dies away at 2:16.
+
+Rebuilding needs librosa and ffmpeg:
+
+```
+python3 analysis/bach.py path/to/recording.m4a        # writes bach_timeline.json (bar starts, end)
+```
+
+`data/bach_timeline.json` holds the current result.
+
 ## Presentation pages
 
-`present/gymnopedie.html`, `present/hon-shirabe.html`, `present/mozart-k387.html` and `present/brahms-op115.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, Fade out, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Fade out lowers the volume over 8 s, then pauses and restores the volume for the next Play; press it again to cancel. Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
+`present/gymnopedie.html`, `present/hon-shirabe.html`, `present/mozart-k387.html`, `present/brahms-op115.html` and `present/bach-bwv1007.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, Fade out, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Fade out lowers the volume over 8 s, then pauses and restores the volume for the next Play; press it again to cancel. Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
 
 - `gymnopedie.mp3`, `01 Gymnopedie No 1 & 3 --Satie.mp3`, `01_Gymnopedie_No_1_3_--Satie.mp3`, `Gymnopedie No 1 & 3 --Satie.mp3`
 - `hon-shirabe.mp3`, `01 - Hon Shirabe (Original Tuning).mp3`, `01_-_Hon_Shirabe_Original_Tuning.mp3`, `Hon Shirabe (Original Tuning).mp3`
 - `mozart.mp3`, `01 Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`, `01_Quartet_14_in_G_K.387_i_Allegro_vivace_assai.mp3`, `Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`
 - `brahms.mp3`, `05 Quintet in B Minor, Op. 115 1 Allegro.mp3`, `05_Quintet_in_B_Minor_Op._115_1_Allegro.mp3`, `Quintet in B Minor, Op. 115 1 Allegro.mp3`
+- `bach.m4a`, `bach.mp3`, `01 Bach (JS)_ Cello Suite #1 In G, B.m4a`, `01_Bach_JS__Cello_Suite_1_In_G_B.m4a`, `Bach (JS)_ Cello Suite #1 In G, BMV 1007 - Prelude.m4a` (a browser that cannot play AAC moves on to `bach.mp3`)
 
 If none is there, choose the file under Options; the browser then remembers it. Rebuild them all with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).

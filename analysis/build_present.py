@@ -1,10 +1,10 @@
 """Build the standalone presentation pages: python3 analysis/build_present.py (from the repo root).
 
-Reads data/timeline.json (Satie), data/hon_timeline.json (Hon Shirabe), data/mozart_timeline.json (Mozart K. 387) and
-data/brahms_timeline.json (Brahms Op. 115), fills analysis/present_template.html,
+Reads data/timeline.json (Satie), data/hon_timeline.json (Hon Shirabe), data/mozart_timeline.json (Mozart K. 387),
+data/brahms_timeline.json (Brahms Op. 115) and data/bach_timeline.json (Bach BWV 1007), fills analysis/present_template.html,
 and writes one page per piece to present/. Each page plays the MP3 sitting beside it.
 """
-import json, math, os
+import json, math, os, re
 
 R2 = lambda x: round(x, 2)
 
@@ -130,15 +130,41 @@ def brahms():
                     light='--bg: #e8e8e9; --surface: #f3f3f4; --ink: #22211f; --muted: #5f5c57; --line: #cbcac7; --breath-rgb: 132 88 32; --wave-rgb: 146 142 134;',
                     dark='--bg: #121211; --surface: #1b1a18; --ink: #e5e3de; --muted: #9a958c; --line: #2e2c29; --breath-rgb: 222 178 112; --wave-rgb: 108 104 96;'))
 
+def bach():
+    D = json.load(open('data/bach_timeline.json'))
+    bars, end, dur = D['bars'], D['end'], D['duration']
+    t = lambda k: bars[k] if k < len(bars) else end
+    def groups(size, inn):
+        # breaths of `size` bars from bar 1, in for `inn` bars; the last breath runs out over the final chord
+        return [[t(k), t(min(k + inn, len(bars) - 1)), t(k + size), 0] for k in range(0, len(bars) - 1, size)]
+    three, four = groups(3, 1), groups(4, 2)
+    turns = {c[0] for c in three}
+    steady = [[R2(bars[0] + i), R2(bars[0] + i + 5), R2(bars[0] + i + 10), 0] for i in range(0, math.ceil(end - bars[0]), 10)]
+    return dict(
+        title='Bach Prelude Breathing', heading='Bach · Cello Suite No. 1, Prelude', key='bach-bwv1007', duration=dur, end=end,
+        order='in', beforeWord='Breathe out',
+        files=['bach.m4a', 'bach.mp3', '01 Bach (JS)_ Cello Suite #1 In G, B.m4a', '01_Bach_JS__Cello_Suite_1_In_G_B.m4a',
+               'Bach (JS)_ Cello Suite #1 In G, BMV 1007 - Prelude.m4a'],
+        modes=[dict(key='three', label='In 1 bar, out 2 bars', cycles=three),
+               dict(key='four', label='Slower: 4 bars (in 2, out 2)', cycles=four),
+               dict(key='steady', label='Steady 6 per minute', cycles=steady)],
+        ripples=[[x, int(x in turns)] for x in bars], ticks=[[x, int(x in turns)] for x in bars],
+        bands=[[0, bars[0], 'n']] + [[c[0], c[2], 'ab'[k % 2]] for k, c in enumerate(three)] + [[end, dur, 'n']],
+        env=None, envStep=None,
+        fonts='https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@1&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
+        tokens=dict(display='"IM Fell English", "Iowan Old Style", "Palatino", Georgia, serif', style='italic', weight=400,
+                    light='--bg: #e8e9ee; --surface: #f3f4f8; --ink: #1b1f2e; --muted: #575d70; --line: #c7cad6; --breath-rgb: 52 72 140; --wave-rgb: 130 138 160;',
+                    dark='--bg: #0f111a; --surface: #161a26; --ink: #e1e4ee; --muted: #8b91a6; --line: #262b3b; --breath-rgb: 150 172 236; --wave-rgb: 92 100 124;'))
+
 tpl = open('analysis/present_template.html').read()
 os.makedirs('present', exist_ok=True)
-for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms())):
+for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach())):
     T = P.pop('tokens')
     tokens = (f":root {{ {T['light']} --f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']}; }}\n"
               f"@media (prefers-color-scheme: dark) {{ :root {{ {T['dark']} color-scheme: dark; }} }}")
     page = (tpl.replace('__TITLE__', P.pop('title').replace('&amp;', '&')).replace('__HEADING__', P.pop('heading'))
                .replace('__FONTS__', P.pop('fonts')).replace('__TOKENS__', tokens)
                .replace('__CONFIG__', json.dumps(P, separators=(',', ':'), ensure_ascii=False).replace('</', '<\\/')))
-    assert '__' not in page.replace('__proto__', ''), name
+    assert not re.search(r'__[A-Z]+__', page), name
     open(f'present/{name}.html', 'w').write(page)
     print(f'present/{name}.html', len(page), 'bytes')

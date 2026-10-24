@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bach Prelude Breathing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@1&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Presentation layout for screen sharing: one screen, the circle fills it, the breath trace and a slim control bar below. Piece colors come from the build. */
+:root { --bg: #e8e9ee; --surface: #f3f4f8; --ink: #1b1f2e; --muted: #575d70; --line: #c7cad6; --breath-rgb: 52 72 140; --wave-rgb: 130 138 160; --f-display: "IM Fell English", "Iowan Old Style", "Palatino", Georgia, serif; --display-style: italic; --display-weight: 400; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0f111a; --surface: #161a26; --ink: #e1e4ee; --muted: #8b91a6; --line: #262b3b; --breath-rgb: 150 172 236; --wave-rgb: 92 100 124; color-scheme: dark; } }
+:root { --f-body: "Jost", "Futura", "Avenir Next", system-ui, sans-serif; --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; --breath: rgb(var(--breath-rgb)); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; }
+.app { height: 100%; max-width: 1280px; margin: 0 auto; padding-inline: 24px; padding-block: 16px 18px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto; gap: 12px; }
+
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+h1 { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(20px, 3vh, 30px); margin: 0; }
+.rate { font-family: var(--f-mono); font-size: clamp(14px, 2vh, 18px); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rate b { font-weight: 500; color: var(--ink); }
+
+.dial { position: relative; min-height: 0; }
+.dial canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cue { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
+.cue-word { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(24px, 5vh, 56px); line-height: 1.1; }
+.cue-count { font-family: var(--f-mono); font-size: clamp(14px, 2.4vh, 22px); color: var(--muted); margin-top: .4em; font-variant-numeric: tabular-nums; }
+
+#trace { width: 100%; height: clamp(48px, 9vh, 88px); display: block; background: var(--surface); border-radius: 6px; }
+
+.bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.seek { flex: 1 1 260px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 0; }
+#seek { width: 100%; -webkit-appearance: none; appearance: none; height: 8px; border-radius: 4px; background: var(--line); cursor: pointer; }
+#seek::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+#seek::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 2px solid var(--surface); }
+button, .filebtn { font: 500 15px var(--f-body); border-radius: 999px; padding: 9px 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.primary { background: var(--breath); border-color: var(--breath); color: var(--bg); }
+#play { min-width: 92px; }
+#fadeBtn { min-width: 122px; }
+button:disabled { opacity: .4; cursor: default; }
+button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-visible { outline: 2px solid var(--breath); outline-offset: 2px; }
+.filebtn { position: relative; display: inline-block; }
+.filebtn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.hint { font-size: 14px; color: var(--ink); min-width: 0; }
+.options { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; padding: 12px 14px; background: var(--surface); border-radius: 8px; font-size: 14px; }
+select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
+.check { display: flex; gap: 6px; align-items: center; }
+@media (max-width: 600px) { .app { padding-inline: 16px; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>Bach · Cello Suite No. 1, Prelude</h1>
+    <div class="rate" id="rate">&nbsp;</div>
+  </header>
+  <div class="dial">
+    <canvas id="circle" aria-hidden="true"></canvas>
+    <div class="cue" aria-live="polite"><div class="cue-word" id="cueWord">&nbsp;</div><div class="cue-count" id="cueCount">&nbsp;</div></div>
+  </div>
+  <canvas id="trace" aria-hidden="true"></canvas>
+  <div class="options" id="options" hidden>
+    <select id="mode" aria-label="Pacing"></select>
+    <select id="split" aria-label="Out-breath length"><option value="even">Even breath</option><option value="long">Longer out-breath</option></select>
+    <label class="check"><input type="checkbox" id="ripples" checked> Ripples</label>
+    <label class="filebtn" id="fileLabel">Choose MP3<input type="file" id="file" accept="audio/*,.mp3"></label>
+  </div>
+  <div class="bar">
+    <button id="play" type="button" class="primary">Play</button>
+    <button id="fadeBtn" type="button" disabled>Fade out</button>
+    <div class="seek"><span id="tNow">0:00</span><input type="range" id="seek" min="0" step="0.1" value="0" aria-label="Position"><span id="tEnd">0:00</span></div>
+    <span class="hint" id="hint" hidden></span>
+    <button id="optBtn" type="button" aria-expanded="false" aria-controls="options">Options</button>
+    <button id="fsBtn" type="button">Full screen</button>
+  </div>
+</main>
+
+<script id="config" type="application/json">{"key":"bach-bwv1007","duration":144.59,"end":135.72,"order":"in","beforeWord":"Breathe out","files":["bach.m4a","bach.mp3","01 Bach (JS)_ Cello Suite #1 In G, B.m4a","01_Bach_JS__Cello_Suite_1_In_G_B.m4a","Bach (JS)_ Cello Suite #1 In G, BMV 1007 - Prelude.m4a"],"modes":[{"key":"three","label":"In 1 bar, out 2 bars","cycles":[[2.9,6.5,12.18,0],[12.18,15.08,21.58,0],[21.58,24.9,31.8,0],[31.8,35.44,42.16,0],[42.16,44.82,50.82,0],[50.82,53.56,59.4,0],[59.4,62.26,68.18,0],[68.18,71.3,76.68,0],[76.68,79.62,85.8,0],[85.8,88.46,95.06,0],[95.06,97.92,104.78,0],[104.78,108.04,114.02,0],[114.02,117.18,123.5,0],[123.5,126.42,135.72,0]]},{"key":"four","label":"Slower: 4 bars (in 2, out 2)","cycles":[[2.9,9.14,15.08,0],[15.08,21.58,28.44,0],[28.44,35.44,42.16,0],[42.16,48.18,53.56,0],[53.56,59.4,65.26,0],[65.26,71.3,76.68,0],[76.68,83.38,88.46,0],[88.46,95.06,101.42,0],[101.42,108.04,114.02,0],[114.02,120.48,126.42,0],[126.42,129.76,135.72,0]]},{"key":"steady","label":"Steady 6 per minute","cycles":[[2.9,7.9,12.9,0],[12.9,17.9,22.9,0],[22.9,27.9,32.9,0],[32.9,37.9,42.9,0],[42.9,47.9,52.9,0],[52.9,57.9,62.9,0],[62.9,67.9,72.9,0],[72.9,77.9,82.9,0],[82.9,87.9,92.9,0],[92.9,97.9,102.9,0],[102.9,107.9,112.9,0],[112.9,117.9,122.9,0],[122.9,127.9,132.9,0],[132.9,137.9,142.9,0]]}],"ripples":[[2.9,1],[6.5,0],[9.14,0],[12.18,1],[15.08,0],[18.28,0],[21.58,1],[24.9,0],[28.44,0],[31.8,1],[35.44,0],[38.94,0],[42.16,1],[44.82,0],[48.18,0],[50.82,1],[53.56,0],[56.6,0],[59.4,1],[62.26,0],[65.26,0],[68.18,1],[71.3,0],[74.28,0],[76.68,1],[79.62,0],[83.38,0],[85.8,1],[88.46,0],[92.24,0],[95.06,1],[97.92,0],[101.42,0],[104.78,1],[108.04,0],[111.08,0],[114.02,1],[117.18,0],[120.48,0],[123.5,1],[126.42,0],[129.76,0]],"ticks":[[2.9,1],[6.5,0],[9.14,0],[12.18,1],[15.08,0],[18.28,0],[21.58,1],[24.9,0],[28.44,0],[31.8,1],[35.44,0],[38.94,0],[42.16,1],[44.82,0],[48.18,0],[50.82,1],[53.56,0],[56.6,0],[59.4,1],[62.26,0],[65.26,0],[68.18,1],[71.3,0],[74.28,0],[76.68,1],[79.62,0],[83.38,0],[85.8,1],[88.46,0],[92.24,0],[95.06,1],[97.92,0],[101.42,0],[104.78,1],[108.04,0],[111.08,0],[114.02,1],[117.18,0],[120.48,0],[123.5,1],[126.42,0],[129.76,0]],"bands":[[0,2.9,"n"],[2.9,12.18,"a"],[12.18,21.58,"b"],[21.58,31.8,"a"],[31.8,42.16,"b"],[42.16,50.82,"a"],[50.82,59.4,"b"],[59.4,68.18,"a"],[68.18,76.68,"b"],[76.68,85.8,"a"],[85.8,95.06,"b"],[95.06,104.78,"a"],[104.78,114.02,"b"],[114.02,123.5,"a"],[123.5,135.72,"b"],[135.72,144.59,"n"]],"env":null,"envStep":null}</script>
+<script>
+(() => {
+  const C = JSON.parse(document.getElementById('config').textContent);
+  const $ = id => document.getElementById(id);
+  const DUR = C.duration, END = C.end, OUT_FIRST = C.order === 'out';
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- options (remembered when storage is available)
+  const store = { get(k) { try { return localStorage.getItem(C.key + '.' + k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(C.key + '.' + k, v); } catch {} } };
+  C.modes.forEach(m => $('mode').add(new Option(m.label, m.key)));
+  const S = { mode: store.get('mode') || C.modes[0].key, split: store.get('split') || 'even', ripples: store.get('ripples') !== '0' && !reduceMotion };
+  if (!C.modes.some(m => m.key === S.mode)) S.mode = C.modes[0].key;
+  $('mode').value = S.mode; $('split').value = S.split; $('ripples').checked = S.ripples;
+  let cycles = C.modes.find(m => m.key === S.mode).cycles;
+  $('mode').onchange = e => { S.mode = e.target.value; store.set('mode', S.mode); cycles = C.modes.find(m => m.key === S.mode).cycles; };
+  $('split').onchange = e => { S.split = e.target.value; store.set('split', S.split); };
+  $('ripples').onchange = e => { S.ripples = e.target.checked; store.set('ripples', S.ripples ? '1' : '0'); };
+  $('optBtn').onclick = () => { const o = $('options'); o.hidden = !o.hidden; $('optBtn').setAttribute('aria-expanded', String(!o.hidden)); };
+
+  // ---- breath model. A cycle is [start, turn, end, wave]: the turn splits it evenly (or on the music); "longer out-breath" gives the out-breath 60%.
+  function bsearch(arr, t, key) { let lo = 0, hi = arr.length - 1, ans = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (key(arr[m]) <= t) { ans = m; lo = m + 1; } else hi = m - 1; } return ans; }
+  function breath(t) {
+    const k = bsearch(cycles, t, c => c[0]);
+    if (k < 0) return { v: OUT_FIRST ? 1 : 0, phase: 'before' };
+    const [i, turn, e, wave] = cycles[k];
+    if (t >= e || t >= END) return { v: 0, phase: 'rest' };
+    const o = S.split === 'long' ? i + (OUT_FIRST ? 0.6 : 0.4) * (e - i) : turn;
+    const first = t < o, p = first ? (t - i) / (o - i) : (t - o) / (e - o);
+    const rising = first !== OUT_FIRST;   // in-breath
+    return { v: rising ? (1 - Math.cos(Math.PI * p)) / 2 : (1 + Math.cos(Math.PI * p)) / 2, phase: rising ? 'in' : 'out', len: e - i, wave, remain: (first ? o : e) - t };
+  }
+  const envAt = t => { const v = C.env ? C.env[Math.floor(t / C.envStep)] : null; return v == null ? 0 : Math.max(0, (v + 60) / 60); };
+
+  // ---- clock: audio when loaded, otherwise a silent preview clock
+  const audio = new Audio(); audio.preload = 'auto';
+  let hasAudio = false, vPlaying = false, vT = 0, anchorA = 0, anchorP = 0, lastSeen = -1, lastFrame = performance.now();
+  function reanchor() { anchorA = audio.currentTime; anchorP = performance.now(); lastSeen = audio.currentTime; }
+  function clockNow(pn) {
+    if (!hasAudio) return vT;
+    if (audio.paused) return audio.currentTime;
+    const ct = audio.currentTime, est = anchorA + (pn - anchorP) / 1000 * audio.playbackRate;
+    if (ct !== lastSeen) { lastSeen = ct; if (Math.abs(est - ct) > 0.08) { anchorA = ct; anchorP = pn; return ct; } }
+    return est;
+  }
+  ['play', 'seeked', 'playing', 'ratechange'].forEach(ev => audio.addEventListener(ev, reanchor));
+  ['play', 'pause', 'ended'].forEach(ev => audio.addEventListener(ev, updatePlayBtn));
+
+  function hint(msg) { $('hint').textContent = msg || ''; $('hint').hidden = !msg; }
+  // Try each source in turn; resolve with the first that the browser can play.
+  function trySource(src) {
+    return new Promise((res, rej) => {
+      const done = ok => { audio.onloadedmetadata = audio.onerror = null; ok ? res() : rej(); };
+      audio.onloadedmetadata = () => done(true); audio.onerror = () => done(false);
+      audio.src = src;
+    });
+  }
+  function loaded(name) {
+    hasAudio = true; vPlaying = false;
+    audio.currentTime = Math.min(Math.max(vT, 0), audio.duration - 1);
+    hint(Math.abs(audio.duration - DUR) > 2 ? `“${name}” is ${fmt(audio.duration)}, not ${fmt(DUR)}: timing won't match.` : '');
+    updatePlayBtn();
+  }
+  async function findBesideThisPage() {
+    for (const name of C.files) {
+      try { await trySource(encodeURIComponent(name)); loaded(name); return true; } catch {}
+    }
+    return false;
+  }
+
+  // a chosen file is kept in this browser, in case the MP3 is not beside the page
+  const saved = (() => {
+    let db;
+    const open = () => db || (db = new Promise((res, rej) => {
+      const r = indexedDB.open('gymnopedie-breathing', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('audio');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    }));
+    const run = (mode, fn) => open().then(d => new Promise((res, rej) => {
+      const t = d.transaction('audio', mode), q = fn(t.objectStore('audio'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => rej(t.error);
+    }));
+    return { get: () => run('readonly', s => s.get(C.key)), put: f => run('readwrite', s => s.put(f, C.key)) };
+  })();
+  async function useFile(f, fromSaved) {
+    if (!f) return;
+    if (audio.src.startsWith('blob:')) URL.revokeObjectURL(audio.src);
+    try { await trySource(URL.createObjectURL(f)); } catch { hint(`Can't play “${f.name}”. Try an MP3.`); return; }
+    loaded(f.name);
+    if (!fromSaved) saved.put(f).catch(() => {});
+  }
+  $('file').addEventListener('change', e => useFile(e.target.files[0]));
+  addEventListener('dragover', e => e.preventDefault());
+  addEventListener('drop', e => { e.preventDefault(); useFile(e.dataTransfer.files[0]); });
+
+  (async () => {
+    if (await findBesideThisPage()) return;
+    try { const f = await saved.get(); if (f && !hasAudio) { await useFile(f, true); if (hasAudio) return; } } catch {}
+    hint(`Put “${C.files[0]}” in this page's folder, or choose it in Options.`);
+  })();
+
+  // ---- transport
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try { if (on && !wakeLock && navigator.wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); } else if (!on && wakeLock) { await wakeLock.release(); } } catch {}
+  }
+  function playing() { return hasAudio ? !audio.paused && !audio.ended : vPlaying; }
+  function togglePlay() {
+    stopFade(true);
+    if (hasAudio) { if (audio.paused) audio.play().catch(() => hint('The browser blocked playback. Press Play again.')); else audio.pause(); }
+    else vPlaying = !vPlaying;
+    updatePlayBtn();
+  }
+  function updatePlayBtn() { const on = playing(); $('play').textContent = on ? 'Pause' : 'Play'; $('fadeBtn').disabled = !on && !fade; keepAwake(on); }
+
+  // fade out: lower the volume over FADE seconds, then pause and put the volume back for the next Play
+  const FADE = 8;
+  let fade = null;
+  function stopFade(restore) {
+    if (!fade) return;
+    cancelAnimationFrame(fade.raf); fade = null;
+    if (restore) audio.volume = 1;
+    $('fadeBtn').textContent = 'Fade out';
+  }
+  function fadeOut() {
+    if (fade) { stopFade(true); updatePlayBtn(); return; }
+    if (!playing()) return;
+    const t0 = performance.now();
+    $('fadeBtn').textContent = 'Cancel fade';
+    const step = now => {
+      const p = Math.min(1, (now - t0) / 1000 / FADE);
+      audio.volume = (1 - p) ** 2;
+      if (p < 1) { fade.raf = requestAnimationFrame(step); return; }
+      stopFade(false);
+      if (hasAudio) audio.pause(); else vPlaying = false;
+      audio.volume = 1;
+      updatePlayBtn();
+    };
+    fade = { raf: requestAnimationFrame(step) };
+  }
+  function toggleFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el)?.catch?.(() => {});
+  }
+  $('play').onclick = togglePlay;
+  $('fadeBtn').onclick = fadeOut;
+  $('fsBtn').onclick = toggleFullscreen;
+  document.addEventListener('fullscreenchange', () => { $('fsBtn').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen'; });
+  addEventListener('keydown', e => {
+    if (/SELECT|BUTTON|TEXTAREA/.test(e.target.tagName) || (e.target.tagName === 'INPUT' && e.target.type !== 'range')) return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    else if (e.key === 'f' || e.key === 'F') toggleFullscreen();
+  });
+  let seeking = false;
+  $('seek').max = DUR; $('tEnd').textContent = fmt(Math.round(DUR));
+  $('seek').addEventListener('input', e => { seeking = true; const t = +e.target.value; if (hasAudio) audio.currentTime = t; else vT = t; ripples.length = 0; });
+  $('seek').addEventListener('change', () => { seeking = false; });
+  (function paintSeek() {
+    const pc = t => (t / DUR * 100).toFixed(2) + '%';
+    const color = { a: 'var(--breath)', b: 'rgb(var(--breath-rgb) / .5)', w: 'rgb(var(--wave-rgb) / .55)', n: 'var(--line)' };
+    $('seek').style.background = `linear-gradient(90deg, ${C.bands.map(([a, b, k]) => `${color[k]} ${pc(a)} ${pc(b)}`).join(', ')})`;
+  })();
+
+  // ---- drawing
+  const cv = $('circle'), cx = cv.getContext('2d'), tv = $('trace'), tx = tv.getContext('2d');
+  let col = {};
+  function readTokens() {
+    const cs = getComputedStyle(document.documentElement);
+    col = { b: cs.getPropertyValue('--breath-rgb').trim(), w: cs.getPropertyValue('--wave-rgb').trim(), ink: cs.getPropertyValue('--ink').trim() };
+  }
+  readTokens();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTokens);
+  const rgba = (rgb, a) => `rgb(${rgb} / ${a})`;
+  function fit(c) {
+    const r = c.getBoundingClientRect(), d = devicePixelRatio || 1;
+    const w = Math.round(r.width * d), h = Math.round(r.height * d);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { w, h, d };
+  }
+  const ripples = [];
+  let prevT = null, radiusNow = 0;
+
+  function drawCircle(st, pn) {
+    const { w, h, d } = fit(cv), cxp = w / 2, cyp = h / 2, s = Math.min(w, h);
+    const rMin = s * 0.2, rMax = s * 0.47;
+    const r = Math.sqrt(rMin * rMin + st.v * (rMax * rMax - rMin * rMin)); // area tracks lung volume
+    radiusNow = r / s;
+    cx.clearRect(0, 0, w, h);
+    const tone = st.phase === 'in' || st.phase === 'out' ? (st.wave ? col.w : col.b) : col.w;
+    cx.setLineDash([2 * d, 6 * d]); cx.lineWidth = d; cx.strokeStyle = rgba(col.w, .5);
+    [rMin, rMax].forEach(rr => { cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.stroke(); });
+    cx.setLineDash([]);
+    const g = cx.createRadialGradient(cxp, cyp, r * 0.1, cxp, cyp, r);
+    g.addColorStop(0, rgba(tone, .10 + .30 * st.v)); g.addColorStop(1, rgba(tone, .22 + .25 * st.v));
+    cx.fillStyle = g; cx.beginPath(); cx.arc(cxp, cyp, r, 0, Math.PI * 2); cx.fill();
+    cx.lineWidth = 2 * d; cx.strokeStyle = rgba(tone, .9); cx.stroke();
+    for (let k = ripples.length - 1; k >= 0; k--) {
+      const rp = ripples[k], age = (pn - rp.born) / 1000, life = rp.strong ? 2.6 : 1.6;
+      if (age > life) { ripples.splice(k, 1); continue; }
+      const rr = (rp.r0 + age * (rp.strong ? 0.05 : 0.035)) * s, a = (1 - age / life) * (rp.strong ? .55 : .3);
+      cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.lineWidth = (rp.strong ? 2 : 1.2) * d; cx.strokeStyle = rgba(tone, a); cx.stroke();
+    }
+  }
+
+  function drawTrace(t) {
+    const { w, h, d } = fit(tv), pad = 8 * d, top = pad, bot = h - pad - 4 * d;
+    const t0 = t - 10, t1 = t + 20, X = x => (x - t0) / (t1 - t0) * w, Y = v => bot - v * (bot - top);
+    const step = 2 * d, at = x => t0 + x / w * (t1 - t0);
+    tx.clearRect(0, 0, w, h);
+    if (C.env) {
+      tx.beginPath(); tx.moveTo(0, bot);
+      for (let x = 0; x <= w; x += step) tx.lineTo(x, Y(envAt(at(x)) * 0.95));
+      tx.lineTo(w, bot); tx.closePath(); tx.fillStyle = rgba(col.w, .38); tx.fill();
+    }
+    tx.fillStyle = rgba(col.w, .8);
+    for (let k = Math.max(0, bsearch(C.ticks, t0, q => q[0])); k < C.ticks.length && C.ticks[k][0] < t1; k++) {
+      const tall = C.ticks[k][1] && S.mode !== 'steady';
+      tx.fillRect(X(C.ticks[k][0]), h - pad - (tall ? 10 : 5) * d, d, (tall ? 10 : 5) * d);
+    }
+    tx.beginPath();
+    for (let x = 0; x <= w; x += step) { const v = breath(at(x)).v; x === 0 ? tx.moveTo(x, Y(v)) : tx.lineTo(x, Y(v)); }
+    tx.lineWidth = 1.75 * d; tx.strokeStyle = rgba(col.b, .95); tx.stroke();
+    if (!C.env) { tx.lineTo(w, bot); tx.lineTo(0, bot); tx.closePath(); tx.fillStyle = rgba(col.b, .14); tx.fill(); }
+    const xn = X(t);
+    tx.fillStyle = rgba(col.w, .12); tx.fillRect(0, 0, xn, h);
+    tx.fillStyle = col.ink; tx.fillRect(xn - d / 2, top - 4 * d, d, bot - top + 8 * d);
+    tx.beginPath(); tx.arc(xn, Y(breath(t).v), 4 * d, 0, Math.PI * 2); tx.fill();
+  }
+
+  function fmt(s) { s = Math.max(0, s); return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`; }
+  const lastText = {};
+  function setText(id, html) { if (lastText[id] !== html) { lastText[id] = html; $(id).innerHTML = html; } }
+
+  function frame(pn) {
+    const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
+    if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = 0; }
+    const t = clockNow(pn), st = breath(t);
+    if (prevT !== null && t > prevT && t - prevT < 0.3 && S.ripples && t < END) {
+      const k = bsearch(C.ripples, t, q => q[0]);
+      if (k >= 0 && C.ripples[k][0] > prevT) ripples.push({ born: pn, r0: radiusNow, strong: !!C.ripples[k][1] && S.mode !== 'steady' });
+    }
+    prevT = t;
+    drawCircle(st, pn);
+    drawTrace(t);
+    // at the very start of an out-first piece, ask for a full breath before Play
+    const ready = OUT_FIRST && t < 0.05 && !playing();
+    const word = ready || st.phase === 'before' ? C.beforeWord : st.phase === 'in' ? 'Breathe in' : st.phase === 'out' ? 'Breathe out' : 'Rest';
+    setText('cueWord', word);
+    setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
+    setText('rate', st.len ? `<b>${(60 / st.len).toFixed(1)}</b> breaths / min` : '&nbsp;');
+    setText('tNow', fmt(t));
+    if (!seeking) $('seek').value = t.toFixed(1);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
