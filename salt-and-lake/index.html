@@ -1,0 +1,555 @@
+<title>Salt and Lake</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,600&family=Jost:wght@400;500&family=Noto+Music&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one quiet column. The spoken cue sits on top like a programme note, the score is the instrument,
+   the keyboard below shows which strings are still sounding. Clash notes carry one colour, the chord's bass another. */
+:root {
+  --bg: #e8ecef;
+  --surface: #f3f5f7;
+  --ink: #1c2633;
+  --muted: #5a6877;
+  --line: #c3ccd5;
+  --lake: rgb(63 112 120);
+  --salt: #9b3f55;
+  --hl: rgb(63 112 120 / .10);
+  --key-white: #fbfcfd;
+  --key-black: #1c2633;
+  --f-display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+  --f-body: "Jost", "Futura", "Avenir Next", system-ui, sans-serif;
+  --f-mono: "Spline Sans Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --f-music: "Noto Music", "Bravura Text", "Segoe UI Symbol", "Apple Symbols", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d131a; --surface: #131b24; --ink: #dce4ea; --muted: #8592a1; --line: #2a3644;
+    --lake: rgb(142 194 192); --salt: #e58ea1; --hl: rgb(142 194 192 / .10);
+    --key-white: #cfd7de; --key-black: #0a0f15; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d131a; --surface: #131b24; --ink: #dce4ea; --muted: #8592a1; --line: #2a3644;
+  --lake: rgb(142 194 192); --salt: #e58ea1; --hl: rgb(142 194 192 / .10);
+  --key-white: #cfd7de; --key-black: #0a0f15; color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 980px; margin: 0 auto; display: grid; gap: 28px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 56px;
+}
+
+header { display: grid; gap: 8px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: clamp(38px, 7vw, 60px); line-height: 1.02; margin: 0; text-wrap: balance; }
+.lede { margin: 0; max-width: 62ch; color: var(--muted); font-size: 17px; }
+.lede em { color: var(--ink); font-style: normal; }
+
+.cue { display: grid; gap: 4px; min-height: 104px; align-content: end; }
+.cue-word { font-family: var(--f-display); font-style: italic; font-size: clamp(26px, 4.6vw, 40px); line-height: 1.12; margin: 0; text-wrap: balance; transition: opacity .5s ease; }
+.cue-sub { margin: 0; color: var(--muted); max-width: 60ch; min-height: 1.55em; transition: opacity .5s ease; }
+.fade { opacity: 0; }
+
+.transport { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button { font: 500 15px var(--f-body); border-radius: 999px; padding: 10px 18px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--muted); }
+.primary { background: var(--lake); border-color: var(--lake); color: var(--bg); min-width: 128px; }
+.primary:hover { border-color: var(--lake); filter: brightness(1.06); }
+button:focus-visible { outline: 2px solid var(--lake); outline-offset: 2px; }
+.sep { width: 1px; height: 28px; background: var(--line); }
+.clock { font-family: var(--f-mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+
+.score-box { background: var(--surface); border-radius: 10px; padding-block: 12px 4px; overflow-x: auto; }
+#score { display: block; width: 100%; min-width: 760px; height: auto; }
+#score .staff { stroke: var(--muted); stroke-width: 1; }
+#score .bar { stroke: var(--ink); stroke-width: 1.2; }
+#score .thick { stroke: var(--ink); stroke-width: 4; }
+#score .ink { fill: var(--ink); }
+#score .salt { stroke: var(--salt); fill: var(--salt); }
+#score .lake { stroke: var(--lake); fill: var(--lake); }
+#score .head { fill: none; stroke-width: 1.7; }
+#score .head.q { stroke-width: 0; }
+#score .head.q.lake { fill: var(--lake); }
+#score .head.q.salt { fill: var(--salt); }
+.music { font-family: var(--f-music); }
+#score .stem { stroke-width: 1.3; fill: none; }
+#score .tie { fill: none; stroke-width: 1.3; }
+#score .ledger { stroke: var(--ink); stroke-width: 1.2; }
+#score .mhl { fill: var(--hl); opacity: 0; transition: opacity .35s ease; }
+#score .mhl.on { opacity: 1; }
+#score .dyn { font-family: var(--f-display); font-style: italic; font-weight: 600; font-size: 17px; fill: var(--ink); }
+#score .expr { font-family: var(--f-display); font-style: italic; font-size: 12.5px; fill: var(--muted); }
+#score .clef { font-family: var(--f-music); fill: var(--ink); }
+#score .ts { font-family: var(--f-display); font-weight: 600; font-size: 21px; fill: var(--ink); }
+#score .barno { font-family: var(--f-mono); font-size: 9.5px; fill: var(--muted); }
+#playhead { stroke: var(--lake); stroke-width: 1.5; opacity: 0; transition: opacity .3s ease; }
+#playhead.on { opacity: .8; }
+
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding-inline: 4px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; background: var(--sw); }
+
+.kbd-box { display: grid; gap: 8px; }
+.kbd { position: relative; height: 112px; border-radius: 0 0 6px 6px; overflow: hidden; border-top: 3px solid var(--ink); }
+.key { position: absolute; top: 0; box-sizing: border-box; }
+.key.w { height: 100%; background: var(--key-white); border-right: 1px solid var(--line); border-radius: 0 0 4px 4px; }
+.key.b { height: 62%; background: var(--key-black); border-radius: 0 0 3px 3px; z-index: 2; }
+.key .glow { position: absolute; inset: 0; border-radius: inherit; opacity: 0; background: var(--c, var(--lake)); }
+.key .lab { position: absolute; left: 0; right: 0; bottom: 6px; text-align: center; font-family: var(--f-mono); font-size: 10px; color: var(--muted); z-index: 1; }
+.key.used .lab { color: var(--ink); font-weight: 500; }
+.kbd-cap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-family: var(--f-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; border-top: 1px solid var(--line); padding-top: 24px; }
+.notes section { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.notes h2 { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 23px; margin: 0; }
+.notes p { margin: 0; }
+.notes ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.notes .mono { font-family: var(--f-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.c-salt { color: var(--salt); font-weight: 500; }
+.c-lake { color: var(--lake); font-weight: 500; }
+.closing { font-family: var(--f-display); font-style: italic; font-size: 20px; line-height: 1.4; }
+
+@media (max-width: 560px) {
+  .clock { margin-left: 0; width: 100%; }
+  .sep { display: none; }
+  .kbd { height: 92px; }
+  .key .lab { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cue-word, .cue-sub, #score .mhl, #playhead { transition: none; }
+}
+</style>
+
+<main class="wrap">
+  <header>
+    <div class="eyebrow">For piano · 8 bars in 3/4 · about 30 seconds</div>
+    <h1>Salt and Lake</h1>
+    <p class="lede">Play <em>B and C together</em>, a harsh clash, and let it ring. Then add <em>C, E and G below</em> without changing the top two notes. The same clash becomes a lush C major seventh chord. The dissonance hasn't changed; the whole around it has grown big enough to hold it.</p>
+  </header>
+
+  <div class="cue" aria-live="polite">
+    <p class="cue-word" id="cueWord">Two notes, one semitone apart.</p>
+    <p class="cue-sub" id="cueSub">Press Play to hear the piece. The top two keys never change.</p>
+  </div>
+
+  <div class="transport">
+    <button class="primary" id="playBtn" type="button">Play the piece</button>
+    <span class="sep" aria-hidden="true"></span>
+    <button id="aloneBtn" type="button">Clash alone</button>
+    <button id="chordBtn" type="button">Clash in the chord</button>
+    <span class="clock" id="clock">0:00 / 0:30</span>
+  </div>
+
+  <div class="score-box">
+    <svg id="score" viewBox="0 0 924 262" role="img" aria-label="Score of Salt and Lake, grand staff, 8 bars in 3/4. Bars 1 to 4: B4 and C5 held in the right hand. Bar 3: C2, G2 and E3 enter in the left hand. Bar 5: all five notes together. Bar 7: B and C restruck alone. Bar 8: fermata."></svg>
+  </div>
+  <div class="legend">
+    <span style="--sw: var(--salt)">The clash: B4 and C5</span>
+    <span style="--sw: var(--lake)">The lake: C2, G2, E3</span>
+  </div>
+
+  <div class="kbd-box">
+    <div class="kbd" id="kbd" aria-hidden="true"></div>
+    <div class="kbd-cap"><span>C2</span><span>Middle C is C4</span><span>C6</span></div>
+  </div>
+
+  <div class="notes">
+    <section>
+      <h2>How to play it</h2>
+      <ol>
+        <li>Slowly, <span class="music">♩</span> = 54. Sustain pedal down from the start.</li>
+        <li>Bar 1: strike <span class="c-salt">B4 and C5</span> together, forte, and keep both keys down to the end of bar 4.</li>
+        <li>Bar 3: while they ring, place <span class="c-lake">C2, G2, E3</span> in the left hand, one per beat, softly.</li>
+        <li>Bar 5: play all five notes together, piano.</li>
+        <li>Bar 7: keep the left hand down and restrike only B and C, pianissimo.</li>
+        <li>Hold through the fermata, then lift hands and pedal.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>What you're hearing</h2>
+      <p>B4 sounds at <span class="mono">493.9 Hz</span> and C5 at <span class="mono">523.3 Hz</span>. They are a minor second apart, and their difference of about <span class="mono">29 Hz</span> is heard as a rough, buzzing beat. That roughness is the clash.</p>
+      <p>Over C, E and G, the B becomes the major seventh of the chord and the top C doubles the root. Nothing about the two upper strings changes. The ear now hears them as colour inside C major seventh.</p>
+    </section>
+    <section>
+      <h2>The salt and the lake</h2>
+      <p>A spoonful of salt stirred into a glass of water makes it undrinkable. Stir the same spoonful into a lake and you can't taste it. The salt is the same in both. What changed is the size of what holds it.</p>
+      <p class="closing">The dissonance hasn't changed. The whole around it has grown big enough to hold it.</p>
+    </section>
+  </div>
+</main>
+
+<script>
+(() => {
+  // ---------- The piece ----------
+  const BPM = 54, BEAT = 60 / BPM, END = 25.5;            // beats; bar 8 plus fermata
+  const CLASH = new Set([71, 72]);
+  // [start beat, MIDI note, velocity 0-127]. Pedal down throughout; everything is damped at END.
+  const PIECE = [
+    [0, 71, 90], [0, 72, 90],
+    [6, 36, 58], [7, 43, 52], [8, 52, 50],
+    [12, 36, 50], [12, 43, 46], [12, 52, 46], [12, 71, 58], [12, 72, 58],
+    [18, 71, 40], [18, 72, 40],
+  ];
+  const DEMOS = {
+    alone: { strikes: [[0, 71, 84], [0, 72, 84]], end: 4.5,
+             cue: ["B and C alone.", "Listen for the fast, rough beating between them."] },
+    chord: { strikes: [[0, 36, 64], [0.03, 43, 58], [0.06, 52, 56], [0.09, 71, 84], [0.09, 72, 84]], end: 4.5,
+             cue: ["The same B and C, inside C major seventh.", "Same two notes at the same strength, with C, E and G below."] },
+  };
+  const CUES = [
+    [0,  "B and C, together.", "A minor second. The two strings beat against each other about 29 times a second."],
+    [3,  "Let it ring.", "Both keys stay down. The clash fades but doesn't resolve."],
+    [6,  "C, E and G arrive below.", "One per beat, softly. The top two notes are not touched."],
+    [9,  "C major seventh.", "C, E, G, B, with C on top. The same clash, now part of a chord."],
+    [12, "The whole chord, together.", "All five notes struck at once, quietly."],
+    [18, "The clash again, alone on top.", "Same two notes as bar 1. Over the bass they sound like colour."],
+    [21, "The dissonance hasn't changed.", "The whole around it has grown big enough to hold it."],
+  ];
+
+  // ---------- Score drawing ----------
+  const svg = document.getElementById("score");
+  const NS = "http://www.w3.org/2000/svg";
+  const SP = 10, TOP = 58, BTOP = 138, X0 = 84, MW = 104, CHX = 24;
+  const DIA = { 36: 14, 43: 18, 52: 23, 71: 34, 72: 35 };   // diatonic step index (C0 = 0)
+  const yOf = (staff, d) => staff === "t" ? TOP + (38 - d) * SP / 2 : BTOP + (26 - d) * SP / 2;
+  const isLine = d => d % 2 === 0;                          // F5 (38) and A3 (26) are lines
+  const el = (tag, attrs, parent = svg) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e); return e;
+  };
+  const txt = (s, attrs) => { const e = el("text", attrs); e.textContent = s; return e; };
+  const mx = i => X0 + i * MW;
+  const RX = 5.8, RY = 4.1;
+
+  // Measures. tr/bs: { notes, kind: "dh" | "rest" | "seq", tieOut, struck }
+  const M = [
+    { tr: { notes: [71, 72], kind: "dh", tieOut: true }, bs: { kind: "rest" }, dyn: ["f", 0] },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: true }, bs: { kind: "rest" } },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: true }, bs: { notes: [36, 43, 52], kind: "seq", tieOut: true }, dyn: ["p", 0], expr: "keep the top keys down" },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: false }, bs: { notes: [36, 43, 52], kind: "dh", tieOut: false } },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: true }, bs: { notes: [36, 43, 52], kind: "dh", tieOut: true }, dyn: ["p", 0] },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: false }, bs: { notes: [36, 43, 52], kind: "dh", tieOut: true } },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: true }, bs: { notes: [36, 43, 52], kind: "dh", tieOut: true }, dyn: ["pp", 0] },
+    { tr: { notes: [71, 72], kind: "dh", tieOut: false }, bs: { notes: [36, 43, 52], kind: "dh", tieOut: false }, fermata: true },
+  ];
+
+  const hlRects = M.map((_, i) => el("rect", { class: "mhl", x: mx(i) + 1, y: TOP - 18, width: MW - 2, height: (BTOP + 72) - (TOP - 18), rx: 4 }));
+
+  // staves
+  for (const top of [TOP, BTOP]) for (let k = 0; k < 5; k++)
+    el("line", { class: "staff", x1: 10, x2: mx(8), y1: top + k * SP, y2: top + k * SP });
+  // system line, barlines, final double bar
+  el("line", { class: "bar", x1: 10, x2: 10, y1: TOP, y2: BTOP + 40 });
+  for (let i = 1; i < 8; i++) el("line", { class: "bar", x1: mx(i), x2: mx(i), y1: TOP, y2: BTOP + 40 });
+  el("line", { class: "bar", x1: mx(8) - 7, x2: mx(8) - 7, y1: TOP, y2: BTOP + 40 });
+  el("line", { class: "thick", x1: mx(8) - 2, x2: mx(8) - 2, y1: TOP, y2: BTOP + 40 });
+  for (let i = 0; i < 8; i += 2) txt(String(i + 1), { class: "barno", x: mx(i) + 3, y: TOP - 8 });
+
+  // clefs, time signature, tempo
+  txt("\u{1D11E}", { class: "clef", x: 14, y: TOP + 31, "font-size": 41 });
+  txt("\u{1D122}", { class: "clef", x: 15, y: BTOP + 21, "font-size": 41 });
+  for (const top of [TOP, BTOP]) {
+    txt("3", { class: "ts", x: 62, y: top + 18, "text-anchor": "middle" });
+    txt("4", { class: "ts", x: 62, y: top + 38, "text-anchor": "middle" });
+  }
+  const tempo = txt("", { class: "expr", x: X0 - 4, y: 20, "font-size": 14 });
+  tempo.innerHTML = 'Lent, <tspan style="font-family: var(--f-music); font-style: normal">♩</tspan> = 54';
+  tempo.style.fill = "var(--ink)";
+
+  const colorFor = n => CLASH.has(n) ? "salt" : "lake";
+
+  // Draw a chord of whole-bar length (dotted half) or a single quarter. Returns head x for each note.
+  function chord(staff, notes, x, kind) {
+    const ds = notes.map(n => DIA[n]).sort((a, b) => a - b);
+    const mid = staff === "t" ? 34 : 22;
+    const far = ds.reduce((a, d) => Math.abs(d - mid) > Math.abs(a - mid) ? d : a, ds[0]);
+    const up = far < mid;
+    const heads = {};
+    // seconds: the higher note of an adjacent pair sits to the right
+    for (const d of ds) heads[d] = heads[d - 1] === x ? x + 2 * RX - 0.6 : x;
+    for (const d of ds) {
+      const n = notes.find(nn => DIA[nn] === d);
+      const cy = yOf(staff, d), hx = heads[d];
+      // ledger lines below the bass staff
+      if (staff === "b") for (let L = 16; L >= d; L -= 2)
+        el("line", { class: "ledger", x1: hx - 9, x2: hx + 9, y1: yOf("b", L), y2: yOf("b", L) });
+      el("ellipse", { class: `head ${kind === "q" ? "q " : ""}${colorFor(n)}`, cx: hx, cy, rx: RX, ry: RY,
+        transform: `rotate(-22 ${hx} ${cy})` });
+    }
+    // stem
+    const cls = `stem ${colorFor(notes[0])}`;
+    const lo = yOf(staff, ds[0]), hi = yOf(staff, ds[ds.length - 1]);
+    const sx = up ? x + RX - 0.6 : x + RX - 0.6;
+    if (up) el("line", { class: cls, x1: sx, x2: sx, y1: lo, y2: hi - 34 });
+    else el("line", { class: cls, x1: sx, x2: sx, y1: hi, y2: lo + 34 });
+    // augmentation dots, placed top-down so a second doesn't share a space
+    if (kind === "dh") {
+      const taken = new Set();
+      const right = Math.max(...Object.values(heads)) + RX + 6;
+      for (const d of [...ds].reverse()) {
+        let dd = isLine(d) ? d + 1 : d;
+        if (taken.has(dd)) dd -= 2;
+        taken.add(dd);
+        const n = notes.find(nn => DIA[nn] === d);
+        el("circle", { class: colorFor(n), cx: right, cy: yOf(staff, dd), r: 1.7 });
+      }
+    }
+    return Object.fromEntries(notes.map(n => [n, heads[DIA[n]]]));
+  }
+
+  function tie(staff, n, x1, x2, dir) {
+    const y = yOf(staff, DIA[n]) + dir * 6;
+    const a = x1 + RX + 3, b = x2 - RX - 2;
+    el("path", { class: `tie ${colorFor(n)}`, d: `M${a} ${y} Q${(a + b) / 2} ${y + dir * 8} ${b} ${y}` });
+  }
+  const tieDir = (staff, n) => staff === "t" ? (n === 72 ? -1 : 1) : (n === 52 ? -1 : 1);
+
+  const headX = M.map(() => ({ t: {}, b: {} }));
+  M.forEach((m, i) => {
+    const x = mx(i) + CHX;
+    headX[i].t = chord("t", m.tr.notes, x, "dh");
+    if (m.bs.kind === "rest") el("rect", { class: "ink", x: mx(i) + MW / 2 - 6, y: yOf("b", 24), width: 12, height: 5 });
+    else if (m.bs.kind === "seq") m.bs.notes.forEach((n, k) => Object.assign(headX[i].b, chord("b", [n], x + k * 30, "q")));
+    else headX[i].b = chord("b", m.bs.notes, x, "dh");
+    if (m.dyn) txt(m.dyn[0], { class: "dyn", x: x - 4, y: TOP + 63 });
+    if (m.expr) txt(m.expr, { class: "expr", x: x - 4, y: TOP - 22 });
+    if (m.fermata) {
+      const fx = x + RX;
+      el("path", { class: "tie salt", d: `M${fx - 10} ${TOP - 12} Q${fx} ${TOP - 26} ${fx + 10} ${TOP - 12}`, "stroke-width": 1.8 });
+      el("circle", { class: "salt", cx: fx, cy: TOP - 13.5, r: 1.8 });
+      el("path", { class: "tie lake", d: `M${fx - 10} ${BTOP + 82} Q${fx} ${BTOP + 96} ${fx + 10} ${BTOP + 82}`, "stroke-width": 1.8 });
+      el("circle", { class: "lake", cx: fx, cy: BTOP + 83.5, r: 1.8 });
+    }
+  });
+  // ties into the next bar
+  M.forEach((m, i) => {
+    if (i === 7) return;
+    for (const [staff, part] of [["t", m.tr], ["b", m.bs]]) {
+      if (!part.tieOut) continue;
+      for (const n of part.notes) tie(staff, n, headX[i][staff][n], headX[i + 1][staff][n], tieDir(staff, n));
+    }
+  });
+  // pedal
+  txt("Ped.", { class: "dyn", x: mx(0) + CHX - 6, y: BTOP + 110, "font-size": 15 });
+  txt("✱", { class: "expr", x: mx(7) + 66, y: BTOP + 110, "font-size": 14 });
+
+  const playhead = el("line", { id: "playhead", x1: 0, x2: 0, y1: TOP - 14, y2: BTOP + 66 });
+
+  // ---------- Keyboard ----------
+  const kbd = document.getElementById("kbd");
+  const LOW = 36, HIGH = 84;
+  const isBlack = n => [1, 3, 6, 8, 10].includes(n % 12);
+  const whites = []; for (let n = LOW; n <= HIGH; n++) if (!isBlack(n)) whites.push(n);
+  const W = 100 / whites.length;
+  const NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+  const glow = {};
+  for (let n = LOW; n <= HIGH; n++) {
+    const k = document.createElement("div");
+    const black = isBlack(n);
+    k.className = "key " + (black ? "b" : "w");
+    if (black) { const wi = whites.indexOf(n - 1); k.style.left = `${(wi + 1) * W - W * 0.3}%`; k.style.width = `${W * 0.6}%`; }
+    else { k.style.left = `${whites.indexOf(n) * W}%`; k.style.width = `${W}%`; }
+    const g = document.createElement("div"); g.className = "glow";
+    g.style.setProperty("--c", CLASH.has(n) ? "var(--salt)" : "var(--lake)");
+    k.appendChild(g); glow[n] = g;
+    if (DIA[n] !== undefined) {
+      k.classList.add("used");
+      const lab = document.createElement("div"); lab.className = "lab";
+      lab.textContent = NAMES[n % 12] + (Math.floor(n / 12) - 1);
+      k.appendChild(lab);
+    }
+    kbd.appendChild(k);
+  }
+
+  // ---------- Piano synthesis ----------
+  let ctx = null, master = null, bus = null, active = [];
+  const freq = n => 440 * Math.pow(2, (n - 69) / 12);
+  const tauSlow = n => 14 * Math.pow(2, -(n - 36) / 30);  // longer ring in the bass
+
+  function setupAudio() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
+    master = ctx.createGain(); master.gain.value = 0.9;
+    // small hall: decaying stereo noise
+    const len = Math.floor(ctx.sampleRate * 3.2);
+    const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c); let lp = 0;
+      for (let i = 0; i < len; i++) {
+        const t = i / ctx.sampleRate;
+        lp += 0.35 * ((Math.random() * 2 - 1) - lp);
+        d[i] = lp * Math.exp(-t / 0.7) * (t < 0.012 ? t / 0.012 : 1);
+      }
+    }
+    const verb = ctx.createConvolver(); verb.buffer = ir;
+    const wet = ctx.createGain(); wet.gain.value = 0.42;
+    const dry = ctx.createGain(); dry.gain.value = 0.85;
+    bus = ctx.createGain();
+    bus.connect(dry); bus.connect(verb); verb.connect(wet);
+    dry.connect(comp); wet.connect(comp); comp.connect(master); master.connect(ctx.destination);
+  }
+
+  let noiseBuf = null;
+  function noise() {
+    if (noiseBuf) return noiseBuf;
+    noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.08), ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+  }
+
+  // One struck key. Returns a voice with a damp(time, tau) method.
+  function strike(n, vel, t, out) {
+    const f = freq(n), v = vel / 127;
+    const voice = ctx.createGain(); voice.gain.value = 1;
+    const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (pan) { pan.pan.value = Math.max(-0.6, Math.min(0.6, (n - 56) / 40)); voice.connect(pan); pan.connect(out); }
+    else voice.connect(out);
+    const srcs = [];
+    const N = Math.min(14, Math.floor(9000 / f));
+    const B = 0.00025 * Math.pow(2, (n - 60) / 24);           // string stiffness
+    const level = 0.16 * Math.pow(v, 1.5);
+    const slope = 2.3 - 1.3 * v;                              // harder strikes are brighter
+    const t0 = tauSlow(n);
+    for (let k = 1; k <= N; k++) {
+      const fk = k * f * Math.sqrt(1 + B * k * k);
+      const hammer = 0.3 + 0.7 * Math.abs(Math.sin(Math.PI * k * 0.14));
+      const peak = level * hammer / Math.pow(k, slope);
+      const g = ctx.createGain(); g.gain.value = 0;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(peak, t + 0.004);
+      const tf = 0.32 / (1 + 0.25 * (k - 1));
+      g.gain.setTargetAtTime(peak * 0.3, t + 0.004, tf);
+      g.gain.setTargetAtTime(0, t + 0.004 + 3 * tf, t0 / (1 + 0.35 * (k - 1)));
+      g.connect(voice);
+      for (const det of [-0.00045, 0.00045]) {             // two strings per note, a hair apart
+        const o = ctx.createOscillator(); o.frequency.value = fk * (1 + det);
+        o.connect(g); o.start(t); srcs.push(o);
+      }
+    }
+    // hammer thump
+    const ns = ctx.createBufferSource(); ns.buffer = noise();
+    const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = Math.min(4000, f * 3); bp.Q.value = 0.9;
+    const ng = ctx.createGain(); ng.gain.setValueAtTime(0.05 * v, t); ng.gain.setTargetAtTime(0, t + 0.002, 0.012);
+    ns.connect(bp); bp.connect(ng); ng.connect(voice); ns.start(t); srcs.push(ns);
+    return {
+      n, t, v,
+      damp(at, tau) { voice.gain.setTargetAtTime(0, at, tau); for (const s of srcs) { try { s.stop(at + tau * 10); } catch (e) {} } },
+    };
+  }
+
+  // Visual envelope that mirrors the synth: quick drop, then a long ring.
+  const envAt = (s, now) => {
+    const dt = now - s.t; if (dt < 0) return 0;
+    return s.v * (0.7 * Math.exp(-dt / 0.35) + 0.3 * Math.exp(-dt / tauSlow(s.n)));
+  };
+
+  // ---------- Playback ----------
+  let run = null;
+  function schedule(strikes, endBeat, mode, cueOverride) {
+    stop(true);
+    setupAudio();
+    if (ctx.state === "suspended") ctx.resume();
+    const out = ctx.createGain(); out.connect(bus);
+    const start = ctx.currentTime + 0.12;
+    const endT = start + endBeat * BEAT;
+    const live = {}; const voices = []; const vis = [];
+    for (const [b, n, vel] of [...strikes].sort((a, c) => a[0] - c[0])) {
+      const t = start + b * BEAT;
+      if (live[n]) live[n].damp(t, 0.04);                     // a restrike replaces the old vibration
+      const vo = strike(n, vel, t, out); live[n] = vo; voices.push(vo);
+      vis.push({ n, t, v: vel / 127 });
+    }
+    for (const vo of voices) vo.damp(endT, 0.3);              // pedal and keys up
+    run = { start, endT, out, voices, vis, mode, cueOverride, lastCue: -1 };
+    setButtons();
+    requestAnimationFrame(tick);
+  }
+
+  function stop(silent) {
+    if (!run) return;
+    const now = ctx.currentTime;
+    run.out.gain.setTargetAtTime(0, now, 0.06);
+    for (const vo of run.voices) vo.damp(now, 0.06);
+    run = null;
+    if (!silent) resetView();
+    setButtons();
+  }
+
+  const playBtn = document.getElementById("playBtn");
+  const aloneBtn = document.getElementById("aloneBtn");
+  const chordBtn = document.getElementById("chordBtn");
+  function setButtons() {
+    playBtn.textContent = run && run.mode === "piece" ? "Stop" : "Play the piece";
+    aloneBtn.setAttribute("aria-pressed", String(!!run && run.mode === "alone"));
+    chordBtn.setAttribute("aria-pressed", String(!!run && run.mode === "chord"));
+  }
+
+  const cueWord = document.getElementById("cueWord"), cueSub = document.getElementById("cueSub");
+  const clock = document.getElementById("clock");
+  const TOTAL = END * BEAT + 2;
+  const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  let cueTimer = null;
+  function setCue(word, sub) {
+    if (cueWord.textContent === word) return;
+    clearTimeout(cueTimer);
+    cueWord.classList.add("fade"); cueSub.classList.add("fade");
+    cueTimer = setTimeout(() => {
+      cueWord.textContent = word; cueSub.textContent = sub;
+      cueWord.classList.remove("fade"); cueSub.classList.remove("fade");
+    }, 260);
+  }
+  function resetView() {
+    setCue("Two notes, one semitone apart.", "Press Play to hear the piece. The top two keys never change.");
+    hlRects.forEach(r => r.classList.remove("on"));
+    playhead.classList.remove("on");
+    for (const n in glow) glow[n].style.opacity = 0;
+    clock.textContent = `0:00 / ${fmt(TOTAL)}`;
+  }
+
+  function tick() {
+    if (!run) return;
+    const now = ctx.currentTime;
+    // key glow
+    const amp = {};
+    for (const s of run.vis) {
+      if (s.t > now) continue;
+      let a = envAt(s, now);
+      if (now > run.endT) a *= Math.exp(-(now - run.endT) / 0.3);
+      amp[s.n] = a;                                          // latest strike wins
+    }
+    for (const n in glow) glow[n].style.opacity = Math.min(1, (amp[n] || 0) * 1.9).toFixed(3);
+
+    if (run.mode === "piece") {
+      const beat = Math.max(0, (now - run.start) / BEAT);
+      const m = Math.min(7, Math.floor(beat / 3));
+      hlRects.forEach((r, i) => r.classList.toggle("on", i === m && beat < END));
+      const x = beat >= 24 ? mx(7) + CHX + 72 + Math.min(1, (beat - 24) / 1.5) * 4 : mx(m) + CHX + (beat - m * 3) * 28;
+      playhead.setAttribute("x1", x); playhead.setAttribute("x2", x);
+      playhead.classList.toggle("on", beat < END);
+      let ci = 0; for (let i = 0; i < CUES.length; i++) if (beat >= CUES[i][0]) ci = i;
+      if (ci !== run.lastCue) { run.lastCue = ci; setCue(CUES[ci][1], CUES[ci][2]); }
+      clock.textContent = `${fmt(Math.max(0, now - run.start))} / ${fmt(TOTAL)}`;
+    } else if (run.lastCue < 0) {
+      run.lastCue = 0; setCue(...run.cueOverride);
+    }
+
+    if (now > run.endT + 2) { run = null; setButtons(); resetView(); return; }
+    requestAnimationFrame(tick);
+  }
+
+  playBtn.addEventListener("click", () => {
+    if (run && run.mode === "piece") stop(false);
+    else schedule(PIECE, END, "piece");
+  });
+  aloneBtn.addEventListener("click", () => schedule(DEMOS.alone.strikes, DEMOS.alone.end, "alone", DEMOS.alone.cue));
+  chordBtn.addEventListener("click", () => schedule(DEMOS.chord.strikes, DEMOS.chord.end, "chord", DEMOS.chord.cue));
+
+  resetView();
+})();
+</script>

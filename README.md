@@ -29,3 +29,12 @@ Then replace `__TIMELINE__` in `analysis/page_template.html` with the contents o
 `analyze1.py` to `analyze4.py` are the exploratory steps: finding the gap between pieces, harmony and bass every 10 s, low-register onsets, and beat tracking.
 
 `data/bars_raw.json` holds the detected downbeats. Bars 61 to 70 of No. 3 fall in the fading final chords and are less reliable; `timeline.py` uses bars 1 to 69.
+
+## Salt and Lake
+
+A short piano piece in `salt-and-lake/`: B4 and C5 struck together and held, then C2, G2 and E3 placed below without touching the top two keys, so the same clash becomes C major seventh. 8 bars in 3/4 at ♩ = 54, about 30 seconds.
+
+Published page: https://claude.ai/artifact/PcEy4YkFsBc2VS73ASRass
+
+- `salt-and-lake/index.html` shows the score, plays the piece on a synthesized piano (Web Audio, nothing to download), and has buttons to compare the clash alone with the clash inside the chord.
+- `salt-and-lake/salt-and-lake.mid` is the same piece as MIDI, for a DAW or a digital piano. Rebuild it with `python3 salt-and-lake/make_midi.py` (no dependencies).
