@@ -182,8 +182,11 @@ def says():
         ripples=[[x, 1] for x in chords], ticks=[[x, int(x in set(chords))] for x in bars],
         bands=[[0, t(turn), 'n'], [t(turn), D['build'], 'w'], [D['build'], D['plateau'], 'b'], [D['plateau'], cut, 'a'], [cut, dur, 'n']],
         env=None, envStep=None,
+        # stage light: rises with the build to full level, fades as the full sound cuts out
+        light={'files': ['says-light.mp4', 'says-light.webm', 'gemini_generated_video_ae1333d5.mp4'], 'from': D['build'],
+               'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3, 'max': 0.85},
         fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
-        tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500,
+        tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500, only='dark',
                     light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
                     dark='--bg: #100e17; --surface: #171521; --ink: #e4e1ee; --muted: #918ba6; --line: #2a2638; --breath-rgb: 182 160 255; --wave-rgb: 100 94 122;'))
 
@@ -191,8 +194,12 @@ tpl = open('analysis/present_template.html').read()
 os.makedirs('present', exist_ok=True)
 for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach()), ('frahm-says', says())):
     T = P.pop('tokens')
-    tokens = (f":root {{ {T['light']} --f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']}; }}\n"
-              f"@media (prefers-color-scheme: dark) {{ :root {{ {T['dark']} color-scheme: dark; }} }}")
+    font = f"--f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']};"
+    if T.get('only') == 'dark':      # a page with stage light keeps the dark room whatever the system theme
+        tokens = f":root {{ {T['dark']} {font} color-scheme: dark; }}"
+    else:
+        tokens = (f":root {{ {T['light']} {font} }}\n"
+                  f"@media (prefers-color-scheme: dark) {{ :root {{ {T['dark']} color-scheme: dark; }} }}")
     page = (tpl.replace('__TITLE__', P.pop('title').replace('&amp;', '&')).replace('__HEADING__', P.pop('heading'))
                .replace('__FONTS__', P.pop('fonts')).replace('__TOKENS__', tokens)
                .replace('__CONFIG__', json.dumps(P, separators=(',', ':'), ensure_ascii=False).replace('</', '<\\/')))

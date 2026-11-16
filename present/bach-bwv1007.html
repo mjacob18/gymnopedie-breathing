@@ -49,9 +49,14 @@ button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-v
 select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
 .check { display: flex; gap: 6px; align-items: center; }
 @media (max-width: 600px) { .app { padding-inline: 16px; } }
+/* optional stage light: a looping video behind the page, only on pages whose config asks for it */
+#light { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; z-index: 0; }
+.app { position: relative; z-index: 1; }
+.lit h1, .lit .rate, .lit .cue { text-shadow: 0 1px 14px rgb(0 0 0 / .8); }
 </style>
 </head>
 <body>
+<video id="light" muted loop playsinline preload="auto" aria-hidden="true" hidden></video>
 <main class="app">
   <header>
     <h1>Bach · Cello Suite No. 1, Prelude</h1>
@@ -312,6 +317,29 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   const lastText = {};
   function setText(id, html) { if (lastText[id] !== html) { lastText[id] = html; $(id).innerHTML = html; } }
 
+  // ---- stage light (optional): dark until C.light.from, rises over fadeIn, breathes with the circle, follows play,
+  // pause and Fade out, and fades over fadeOut once the music stops at C.light.until
+  const L = C.light, vid = $('light');
+  let lightOn = false, presence = 0;
+  if (L) (async () => {
+    vid.hidden = false;
+    for (const name of L.files) {
+      try { await new Promise((res, rej) => { vid.onloadeddata = res; vid.onerror = rej; vid.src = encodeURIComponent(name); }); lightOn = true; return; } catch {}
+    }
+    vid.hidden = true;
+  })();
+  function drawLight(t, st, dt) {
+    if (!lightOn) return;
+    const target = playing() ? (hasAudio ? audio.volume : 1) : 0;
+    presence += (target - presence) * Math.min(1, dt / (target > presence ? 1.5 : 0.8));
+    const level = Math.min(1, Math.max(0, (t - L.from) / L.fadeIn)) * Math.min(1, Math.max(0, (L.until + L.fadeOut - t) / L.fadeOut));
+    const breathe = st.phase === 'in' || st.phase === 'out' ? 0.6 + 0.4 * st.v : 0.6;
+    const o = level * presence * breathe * L.max;
+    vid.style.opacity = o.toFixed(3);
+    document.body.classList.toggle('lit', o > 0.02);
+    if (o > 0.001) { if (vid.paused) vid.play().catch(() => {}); } else if (!vid.paused) vid.pause();
+  }
+
   function frame(pn) {
     const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
     if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = 0; }
@@ -321,6 +349,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
       if (k >= 0 && C.ripples[k][0] > prevT) ripples.push({ born: pn, r0: radiusNow, strong: !!C.ripples[k][1] && S.mode !== 'steady' });
     }
     prevT = t;
+    drawLight(t, st, dt);
     drawCircle(st, pn);
     drawTrace(t);
     // at the very start of an out-first piece, ask for a full breath before Play
