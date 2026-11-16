@@ -1,7 +1,8 @@
 """Build the standalone presentation pages: python3 analysis/build_present.py (from the repo root).
 
 Reads data/timeline.json (Satie), data/hon_timeline.json (Hon Shirabe), data/mozart_timeline.json (Mozart K. 387),
-data/brahms_timeline.json (Brahms Op. 115) and data/bach_timeline.json (Bach BWV 1007), fills analysis/present_template.html,
+data/brahms_timeline.json (Brahms Op. 115), data/bach_timeline.json (Bach BWV 1007) and
+data/says_timeline.json (Nils Frahm, Says), fills analysis/present_template.html,
 and writes one page per piece to present/. Each page plays the MP3 sitting beside it.
 """
 import json, math, os, re
@@ -156,9 +157,39 @@ def bach():
                     light='--bg: #e8e9ee; --surface: #f3f4f8; --ink: #1b1f2e; --muted: #575d70; --line: #c7cad6; --breath-rgb: 52 72 140; --wave-rgb: 130 138 160;',
                     dark='--bg: #0f111a; --surface: #161a26; --ink: #e1e4ee; --muted: #8b91a6; --line: #262b3b; --breath-rgb: 150 172 236; --wave-rgb: 92 100 124;'))
 
+def says():
+    D = json.load(open('data/says_timeline.json'))
+    beat, cut, dur, turn = D['beat'], D['cut'], D['duration'], D['turn']
+    t = lambda i: R2(D['start'] + beat * i)                     # grid beat i, counted from the first note
+    def grid_cycles(size, inn):
+        # breaths of `size` beats from the chord change, in for `inn` beats; a last part-breath of at least half
+        # a breath ends where the full sound stops
+        out, i = [], turn
+        while t(i + size) <= cut + 0.3: out.append([t(i), t(i + inn), t(i + size), 0]); i += size
+        if cut - t(i) >= size * beat / 2: out.append([t(i), R2((t(i) + cut) / 2), cut, 0])
+        return out
+    steady, x = [], t(turn)
+    while x + 10 <= cut + 0.3: steady.append([R2(x), R2(x + 5), R2(x + 10), 0]); x += 10
+    chords = [t(i) for i in range(turn, int((cut - D['start']) / beat) + 1, 16)]
+    bars = [t(i) for i in range(turn % 4, int((cut - D['start']) / beat) + 1, 4)]
+    return dict(
+        title='Says Breathing', heading='Nils Frahm · Says', key='frahm-says', duration=dur, end=cut,
+        order='in', beforeWord='Breathe out',
+        files=['says.mp3', '02 - Says.mp3', '02_-_Says.mp3', 'Says.mp3'],
+        modes=[dict(key='six', label='6 bars (in 3, out 3)', cycles=grid_cycles(24, 12)),
+               dict(key='eight', label='Slower: 8 bars, with the chords', cycles=grid_cycles(32, 16)),
+               dict(key='steady', label='Steady 6 per minute', cycles=steady)],
+        ripples=[[x, 1] for x in chords], ticks=[[x, int(x in set(chords))] for x in bars],
+        bands=[[0, t(turn), 'n'], [t(turn), D['build'], 'w'], [D['build'], D['plateau'], 'b'], [D['plateau'], cut, 'a'], [cut, dur, 'n']],
+        env=None, envStep=None,
+        fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
+        tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500,
+                    light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
+                    dark='--bg: #100e17; --surface: #171521; --ink: #e4e1ee; --muted: #918ba6; --line: #2a2638; --breath-rgb: 182 160 255; --wave-rgb: 100 94 122;'))
+
 tpl = open('analysis/present_template.html').read()
 os.makedirs('present', exist_ok=True)
-for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach())):
+for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach()), ('frahm-says', says())):
     T = P.pop('tokens')
     tokens = (f":root {{ {T['light']} --f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']}; }}\n"
               f"@media (prefers-color-scheme: dark) {{ :root {{ {T['dark']} color-scheme: dark; }} }}")

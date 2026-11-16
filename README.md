@@ -97,14 +97,32 @@ python3 analysis/bach.py path/to/recording.m4a        # writes bach_timeline.jso
 
 `data/bach_timeline.json` holds the current result.
 
+## Says version
+
+`present/frahm-says.html` is a presentation page for Nils Frahm, "Says", from *Spaces* (2013; MP3, 8:18). The MP3 is not in this repo.
+
+- "Says" is a sequenced arpeggio at a fixed tempo, 149.6 beats per minute (0.401 s), building for eight minutes over a nearly unchanging harmony. A straight-line fit through the tracked beats holds to within about 0.1 s across the whole track, so one grid, counted from the first note (0:00.06), covers it.
+- Chords and bass change most at beat 14 of a 32-beat (8-bar) cycle counted from the first note, about twice the average change, so the first note is a two-beat pickup and the breaths start on that chord change (0:05.7).
+- Default breathing is 6 bars (24 beats, 9.6 s; in 3 bars, out 3), about 6.2 per minute. The 50th breath ends exactly where the full sound cuts out, at 8:06.9; the quieter tail to 8:18 is rest. "Slower: 8 bars, with the chords" (12.8 s, about 4.7 per minute) puts every breath start on the chord change; "Steady 6 per minute" is the alternative.
+- The seek bar shades the long quiet stretch, the build from 4:43, and the full-level climax from 5:38.
+
+Rebuilding needs librosa:
+
+```
+python3 analysis/says.py path/to/recording.mp3        # writes says_timeline.json (grid start, beat, chord-change beat, build, cut)
+```
+
+`data/says_timeline.json` holds the current result.
+
 ## Presentation pages
 
-`present/gymnopedie.html`, `present/hon-shirabe.html`, `present/mozart-k387.html`, `present/brahms-op115.html` and `present/bach-bwv1007.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, Fade out, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Fade out lowers the volume over 8 s, then pauses and restores the volume for the next Play; press it again to cancel. Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
+`present/gymnopedie.html`, `present/hon-shirabe.html`, `present/mozart-k387.html`, `present/brahms-op115.html`, `present/bach-bwv1007.html` and `present/frahm-says.html` are standalone, minimal-text versions for screen sharing (one screen: circle, breath trace, Play, Fade out, seek, Options, Full screen; Space plays or pauses, F toggles full screen). Fade out lowers the volume over 8 s, then pauses and restores the volume for the next Play; press it again to cancel. Put each next to its MP3 and open it straight from the folder; it plays the MP3 beside it. It looks for these names, in order:
 
 - `gymnopedie.mp3`, `01 Gymnopedie No 1 & 3 --Satie.mp3`, `01_Gymnopedie_No_1_3_--Satie.mp3`, `Gymnopedie No 1 & 3 --Satie.mp3`
 - `hon-shirabe.mp3`, `01 - Hon Shirabe (Original Tuning).mp3`, `01_-_Hon_Shirabe_Original_Tuning.mp3`, `Hon Shirabe (Original Tuning).mp3`
 - `mozart.mp3`, `01 Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`, `01_Quartet_14_in_G_K.387_i_Allegro_vivace_assai.mp3`, `Quartet 14 in G, K.387, i) Allegro vivace assai.mp3`
 - `brahms.mp3`, `05 Quintet in B Minor, Op. 115 1 Allegro.mp3`, `05_Quintet_in_B_Minor_Op._115_1_Allegro.mp3`, `Quintet in B Minor, Op. 115 1 Allegro.mp3`
 - `bach.m4a`, `bach.mp3`, `01 Bach (JS)_ Cello Suite #1 In G, B.m4a`, `01_Bach_JS__Cello_Suite_1_In_G_B.m4a`, `Bach (JS)_ Cello Suite #1 In G, BMV 1007 - Prelude.m4a` (a browser that cannot play AAC moves on to `bach.mp3`)
+- `says.mp3`, `02 - Says.mp3`, `02_-_Says.mp3`, `Says.mp3`
 
 If none is there, choose the file under Options; the browser then remembers it. Rebuild them all with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).
