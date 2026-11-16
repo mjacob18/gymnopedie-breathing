@@ -50,13 +50,15 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
 .check { display: flex; gap: 6px; align-items: center; }
 @media (max-width: 600px) { .app { padding-inline: 16px; } }
 /* optional stage light: a looping video behind the page, only on pages whose config asks for it */
-#light { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; z-index: 0; }
+#light, #fractal { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; z-index: 0; }
+#fractal { filter: blur(0.5px); }
 .app { position: relative; z-index: 1; }
 .lit h1, .lit .rate, .lit .cue { text-shadow: 0 1px 14px rgb(0 0 0 / .8); }
 </style>
 </head>
 <body>
 <video id="light" muted loop playsinline preload="auto" aria-hidden="true" hidden></video>
+<canvas id="fractal" aria-hidden="true" hidden></canvas>
 <main class="app">
   <header>
     <h1>Gymnopédie No. 1 &amp; 3</h1>
@@ -276,6 +278,10 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     cx.setLineDash([2 * d, 6 * d]); cx.lineWidth = d; cx.strokeStyle = rgba(col.w, .5);
     [rMin, rMax].forEach(rr => { cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.stroke(); });
     cx.setLineDash([]);
+    if (shade > 0) {                                          // while stage light is on, keep the circle a calm window
+      cx.save(); cx.globalAlpha = 0.7 * shade; cx.fillStyle = getComputedStyle(document.body).backgroundColor;
+      cx.beginPath(); cx.arc(cxp, cyp, r, 0, Math.PI * 2); cx.fill(); cx.restore();
+    }
     const g = cx.createRadialGradient(cxp, cyp, r * 0.1, cxp, cyp, r);
     g.addColorStop(0, rgba(tone, .10 + .30 * st.v)); g.addColorStop(1, rgba(tone, .22 + .25 * st.v));
     cx.fillStyle = g; cx.beginPath(); cx.arc(cxp, cyp, r, 0, Math.PI * 2); cx.fill();
@@ -317,27 +323,91 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   const lastText = {};
   function setText(id, html) { if (lastText[id] !== html) { lastText[id] = html; $(id).innerHTML = html; } }
 
-  // ---- stage light (optional): dark until C.light.from, rises over fadeIn, breathes with the circle, follows play,
-  // pause and Fade out, and fades over fadeOut once the music stops at C.light.until
-  const L = C.light, vid = $('light');
-  let lightOn = false, presence = 0;
-  if (L) (async () => {
-    vid.hidden = false;
+  // ---- stage light (optional): dark until C.light.from, rises over fadeIn, follows play, pause and Fade out, and
+  // fades over fadeOut once the music stops at C.light.until. It is either a looping video (kind "video", which also
+  // brightens with each in-breath) or a live Julia-set fractal (kind "fractal", whose shape breathes instead).
+  const L = C.light;
+  let layer = null, presence = 0, shade = 0;
+  if (L && L.kind === 'fractal') layer = fractalLayer($('fractal'));
+  else if (L) (async () => {
+    const vid = $('light'); vid.hidden = false;
     for (const name of L.files) {
-      try { await new Promise((res, rej) => { vid.onloadeddata = res; vid.onerror = rej; vid.src = encodeURIComponent(name); }); lightOn = true; return; } catch {}
+      try { await new Promise((res, rej) => { vid.onloadeddata = res; vid.onerror = rej; vid.src = encodeURIComponent(name); }); }
+      catch { continue; }
+      layer = (o, t, st) => {
+        vid.style.opacity = (o * (st.phase === 'in' || st.phase === 'out' ? 0.6 + 0.4 * st.v : 0.6)).toFixed(3);
+        if (o > 0.001) { if (vid.paused) vid.play().catch(() => {}); } else if (!vid.paused) vid.pause();
+      };
+      return;
     }
     vid.hidden = true;
   })();
-  function drawLight(t, st, dt) {
-    if (!lightOn) return;
+
+  // The fractal is the Julia set of z -> z^2 + c with c = -1 + (r/4) e^(i th), inside the Mandelbrot set's period-2
+  // bulb, so the shape always stays in one piece. th drifts slowly over minutes, turning the form from rounded to wavy;
+  // r follows the breath, so the spirals wind in on the in-breath and open on the out-breath. Nothing zooms, pans or
+  // rotates. Edges are lit by their distance to the set, in the page's accent colour.
+  function fractalLayer(cv) {
+    const gl = cv.getContext('webgl', { antialias: false, alpha: false });
+    if (!gl) return null;
+    const FRAG = `precision highp float;
+      uniform vec2 uRes, uC; uniform float uView; uniform vec3 uBg, uAccent;
+      void main() {
+        vec2 z = (gl_FragCoord.xy - 0.5 * uRes) / uRes.y * uView, dz = vec2(1.0, 0.0);
+        float logScale = 0.0, m2 = 0.0; bool esc = false;
+        for (int i = 0; i < 240; i++) {
+          dz = 2.0 * vec2(z.x * dz.x - z.y * dz.y, z.x * dz.y + z.y * dz.x);
+          if (dot(dz, dz) > 1e16) { dz *= 1e-8; logScale += 18.420681; }
+          z = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + uC;
+          m2 = dot(z, z);
+          if (m2 > 1e6) { esc = true; break; }
+        }
+        vec3 col = uBg + uAccent * 0.02;
+        if (esc) {
+          float r = sqrt(m2), d = exp(log(0.5 * r * log(r)) - log(length(dz)) - logScale - log(uView / uRes.y));
+          col = uBg + uAccent * (0.10 * exp(-d / 8.0) + 0.5 * exp(-d / 0.8));
+        }
+        gl_FragColor = vec4(col, 1.0);
+      }`;
+    const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return gl.getShaderParameter(o, gl.COMPILE_STATUS) ? o : null; };
+    const vs = sh(gl.VERTEX_SHADER, 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }'), fs = sh(gl.FRAGMENT_SHADER, FRAG);
+    if (!vs || !fs) return null;
+    const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return null;
+    gl.useProgram(pr);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = Object.fromEntries(['uRes', 'uC', 'uView', 'uBg', 'uAccent'].map(n => [n, gl.getUniformLocation(pr, n)]));
+    const rgb = str => str.match(/[\d.]+/g).slice(0, 3).map(x => x / 255);
+    const F = L.fractal;
+    let last = -1e9;
+    cv.hidden = false;
+    return (o, t, st, pn) => {
+      cv.style.opacity = o.toFixed(3);
+      if (o < 0.001 || pn - last < 33) return;              // about 30 drawings a second is plenty for this pace
+      last = pn;
+      const d = Math.min(devicePixelRatio || 1, 2) * F.res;
+      const w = Math.max(1, Math.round(cv.clientWidth * d)), h = Math.max(1, Math.round(cv.clientHeight * d));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; gl.viewport(0, 0, w, h); }
+      const th = F.th + F.thAmp * Math.sin(2 * Math.PI * (t - L.from) / F.thPeriod);
+      const r = F.rOut + (F.rIn - F.rOut) * (st.phase === 'in' || st.phase === 'out' ? st.v : 0);
+      gl.uniform2f(U.uRes, w, h); gl.uniform2f(U.uC, -1 + 0.25 * r * Math.cos(th), 0.25 * r * Math.sin(th));
+      gl.uniform1f(U.uView, F.view);
+      gl.uniform3fv(U.uBg, rgb(getComputedStyle(document.body).backgroundColor)); gl.uniform3fv(U.uAccent, rgb(col.b));
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
+  }
+
+  function drawLight(t, st, dt, pn) {
+    if (!layer) return;
     const target = playing() ? (hasAudio ? audio.volume : 1) : 0;
     presence += (target - presence) * Math.min(1, dt / (target > presence ? 1.5 : 0.8));
     const level = Math.min(1, Math.max(0, (t - L.from) / L.fadeIn)) * Math.min(1, Math.max(0, (L.until + L.fadeOut - t) / L.fadeOut));
-    const breathe = st.phase === 'in' || st.phase === 'out' ? 0.6 + 0.4 * st.v : 0.6;
-    const o = level * presence * breathe * L.max;
-    vid.style.opacity = o.toFixed(3);
+    const o = level * presence * L.max;
+    shade = o / L.max;
+    layer(o, t, st, pn);
     document.body.classList.toggle('lit', o > 0.02);
-    if (o > 0.001) { if (vid.paused) vid.play().catch(() => {}); } else if (!vid.paused) vid.pause();
   }
 
   function frame(pn) {
@@ -349,7 +419,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
       if (k >= 0 && C.ripples[k][0] > prevT) ripples.push({ born: pn, r0: radiusNow, strong: !!C.ripples[k][1] && S.mode !== 'steady' });
     }
     prevT = t;
-    drawLight(t, st, dt);
+    drawLight(t, st, dt, pn);
     drawCircle(st, pn);
     drawTrace(t);
     // at the very start of an out-first piece, ask for a full breath before Play

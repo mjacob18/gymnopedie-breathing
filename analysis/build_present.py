@@ -182,9 +182,10 @@ def says():
         ripples=[[x, 1] for x in chords], ticks=[[x, int(x in set(chords))] for x in bars],
         bands=[[0, t(turn), 'n'], [t(turn), D['build'], 'w'], [D['build'], D['plateau'], 'b'], [D['plateau'], cut, 'a'], [cut, dur, 'n']],
         env=None, envStep=None,
-        # stage light: rises with the build to full level, fades as the full sound cuts out
-        light={'files': ['says-light.mp4', 'says-light.webm', 'gemini_generated_video_ae1333d5.mp4'], 'from': D['build'],
-               'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3, 'max': 0.85},
+        # stage light: a live Julia-set fractal that rises with the build to full level, breathes with the circle and
+        # fades as the full sound cuts out
+        light={'kind': 'fractal', 'from': D['build'], 'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3,
+               'max': 0.9, 'fractal': {'th': 0.55, 'thAmp': 0.25, 'thPeriod': 200, 'rOut': 0.955, 'rIn': 0.985, 'view': 2.6, 'res': 0.75}},
         fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
         tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500, only='dark',
                     light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
