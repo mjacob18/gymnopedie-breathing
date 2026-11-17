@@ -27,6 +27,7 @@ h1 { font-family: var(--f-display); font-style: var(--display-style); font-weigh
 .cue { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .cue-word { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(24px, 5vh, 56px); line-height: 1.1; }
 .cue-count { font-family: var(--f-mono); font-size: clamp(14px, 2.4vh, 22px); color: var(--muted); margin-top: .4em; font-variant-numeric: tabular-nums; }
+.cue-note { font-size: clamp(14px, 2.2vh, 19px); color: var(--muted); margin-top: .5em; min-height: 1.3em; opacity: 0; }
 
 #trace { width: 100%; height: clamp(48px, 9vh, 88px); display: block; background: var(--surface); border-radius: 6px; }
 
@@ -47,6 +48,7 @@ button:focus-visible, .filebtn:focus-within, select:focus-visible, input:focus-v
 .options { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; padding: 12px 14px; background: var(--surface); border-radius: 8px; font-size: 14px; }
 select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); max-width: 100%; }
 .check { display: flex; gap: 6px; align-items: center; }
+.group { display: contents; }
 @media (max-width: 600px) { .app { padding-inline: 16px; } }
 /* optional stage light: a looping video behind the page, only on pages whose config asks for it */
 #light, #fractal { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; z-index: 0; }
@@ -65,13 +67,18 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   </header>
   <div class="dial">
     <canvas id="circle" aria-hidden="true"></canvas>
-    <div class="cue" aria-live="polite"><div class="cue-word" id="cueWord">&nbsp;</div><div class="cue-count" id="cueCount">&nbsp;</div></div>
+    <div class="cue" id="cue" aria-live="polite"><div class="cue-word" id="cueWord">&nbsp;</div><div class="cue-count" id="cueCount">&nbsp;</div><div class="cue-note" id="cueNote"></div></div>
   </div>
   <canvas id="trace" aria-hidden="true"></canvas>
   <div class="options" id="options" hidden>
     <select id="mode" aria-label="Pacing"></select>
     <select id="split" aria-label="Out-breath length"><option value="even">Even breath</option><option value="long">Longer out-breath</option></select>
     <label class="check"><input type="checkbox" id="ripples" checked> Ripples</label>
+    <span class="group" id="bodyOpts" hidden>
+      <label class="check"><input type="checkbox" id="bodyOn" checked> Body cues</label>
+      <select id="sweep" aria-label="Body scan pace"><option value="4">Scan: 4 breaths per pass</option><option value="6">Scan: 6 breaths per pass</option><option value="8">Scan: 8 breaths per pass</option><option value="10">Scan: 10 breaths per pass</option><option value="12">Scan: 12 breaths per pass</option></select>
+      <select id="pulse" aria-label="Heart pulse"><option value="breath">Heart: pulse with the breath</option><option value="heart">Heart: slow heartbeat</option></select>
+    </span>
     <label class="filebtn" id="fileLabel">Choose MP3<input type="file" id="file" accept="audio/*,.mp3"></label>
   </div>
   <div class="bar">
@@ -267,12 +274,14 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   const ripples = [];
   let prevT = null, radiusNow = 0;
 
-  function drawCircle(st, pn) {
+  function drawCircle(st, pn, alpha) {
     const { w, h, d } = fit(cv), cxp = w / 2, cyp = h / 2, s = Math.min(w, h);
     const rMin = s * 0.2, rMax = s * 0.47;
     const r = Math.sqrt(rMin * rMin + st.v * (rMax * rMax - rMin * rMin)); // area tracks lung volume
     radiusNow = r / s;
     cx.clearRect(0, 0, w, h);
+    if (alpha <= 0) return;
+    cx.save(); cx.globalAlpha = alpha;
     const tone = st.phase === 'in' || st.phase === 'out' ? (st.wave ? col.w : col.b) : col.w;
     cx.setLineDash([2 * d, 6 * d]); cx.lineWidth = d; cx.strokeStyle = rgba(col.w, .5);
     [rMin, rMax].forEach(rr => { cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.stroke(); });
@@ -291,6 +300,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
       const rr = (rp.r0 + age * (rp.strong ? 0.05 : 0.035)) * s, a = (1 - age / life) * (rp.strong ? .55 : .3);
       cx.beginPath(); cx.arc(cxp, cyp, rr, 0, Math.PI * 2); cx.lineWidth = (rp.strong ? 2 : 1.2) * d; cx.strokeStyle = rgba(tone, a); cx.stroke();
     }
+    cx.restore();
   }
 
   function drawTrace(t) {
@@ -409,6 +419,131 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     document.body.classList.toggle('lit', o > 0.02);
   }
 
+  // ---- body cues (optional): for a while the circle gives way to a figure, either a slow body scan (a light that
+  // travels head to feet and back over several breaths: it rests while the in-breath brightens the area, then glides a
+  // step on the out-breath) or a heart check-in (a warm glow at the heart that swells with the breath or a slow beat)
+  const B = C.body, bodyImg = B ? Object.assign(new Image(), { src: 'data:image/png;base64,' + B.png }) : null;
+  const off = document.createElement('canvas'), ox = off.getContext('2d');
+  if (B) {
+    $('bodyOpts').hidden = false;
+    S.bodyOn = store.get('bodyOn') !== '0'; S.sweep = +(store.get('sweep') || B.sweep); S.pulse = store.get('pulse') || B.pulse;
+    $('bodyOn').checked = S.bodyOn; $('sweep').value = String(S.sweep); $('pulse').value = S.pulse;
+    $('bodyOn').onchange = e => { S.bodyOn = e.target.checked; store.set('bodyOn', S.bodyOn ? '1' : '0'); };
+    $('sweep').onchange = e => { S.sweep = +e.target.value; store.set('sweep', String(S.sweep)); };
+    $('pulse').onchange = e => { S.pulse = e.target.value; store.set('pulse', S.pulse); };
+  }
+  const ramp = (t, a, b, f) => Math.min(1, Math.max(0, (t - a) / f)) * Math.min(1, Math.max(0, (b - t) / f));
+  function bodyWeights(t) {                                // how present the figure is, and how much is scan or heart
+    const w = { p: 0, scan: 0, heart: 0, seg: null };
+    if (!B || !S.bodyOn) return w;
+    for (const [a, b] of B.blocks) w.p = Math.max(w.p, ramp(t, a, b, 3));
+    for (const seg of B.segments) {
+      const v = ramp(t, seg[1], seg[2], 2);
+      if (seg[0] === 'scan' && v >= w.scan && v > 0) { w.scan = v; w.seg = seg; } else if (seg[0] === 'heart') w.heart = Math.max(w.heart, v);
+    }
+    return w;
+  }
+  function cycleAt(t) {
+    const k = bsearch(cycles, t, c => c[0]);
+    if (k < 0) return null;
+    const [i, turn, e] = cycles[k];
+    return { k, i, e, o: S.split === 'long' ? i + (OUT_FIRST ? 0.6 : 0.4) * (e - i) : turn };
+  }
+  function scanPos(t, seg) {                              // 0 at the head, 1 at the feet
+    const c = cycleAt(t), c0 = cycleAt(seg[1] + 0.01);
+    if (!c || !c0) return B.start === 'head' ? 0 : 1;
+    const n = c.k - c0.k, within = ((n % S.sweep) + S.sweep) % S.sweep, pass = Math.floor(n / S.sweep);
+    const ease = q => (1 - Math.cos(Math.PI * Math.min(1, Math.max(0, q)))) / 2;
+    let glide;                                            // the step happens on the out-breath
+    if (B.move === 'smooth') glide = (t - c.i) / (c.e - c.i);
+    else if (!OUT_FIRST) glide = t < c.o ? 0 : ease((t - c.o) / (c.e - c.o));
+    else glide = t < c.o ? ease((t - c.i) / (c.o - c.i)) : 1;
+    const f = (within + glide) / S.sweep, down = (pass % 2 === 0) === (B.start === 'head');
+    return down ? f : 1 - f;
+  }
+  function glowAt(gx, gy, rad, a, core, edge) {
+    const rg = cx.createRadialGradient(gx, gy, 0, gx, gy, rad);
+    rg.addColorStop(0, `rgb(${core} / ${a})`); rg.addColorStop(0.35, `rgb(${edge} / ${a * 0.45})`); rg.addColorStop(1, `rgb(${edge} / 0)`);
+    cx.fillStyle = rg; cx.beginPath(); cx.arc(gx, gy, rad, 0, Math.PI * 2); cx.fill();
+  }
+  function litOutline(maskFn, glow, W, H, x0, y0, fw, fh, d) {   // the outline where the mask allows, added with a soft glow
+    if (off.width !== W || off.height !== H) { off.width = W; off.height = H; }
+    ox.globalCompositeOperation = 'source-over'; ox.clearRect(0, 0, W, H);
+    ox.drawImage(bodyImg, x0, y0, fw, fh);
+    ox.globalCompositeOperation = 'destination-in'; maskFn(ox);
+    cx.save(); cx.globalCompositeOperation = 'lighter'; cx.shadowColor = glow; cx.shadowBlur = 12 * d; cx.drawImage(off, 0, 0); cx.restore();
+  }
+  const heat = B ? B.points.map(() => 0) : [], pulseRings = [];
+  let prevScan = null, prevPulseK = null, prevBodyT = null;
+  function drawBody(t, st, dt, w) {
+    if (!B || w.p <= 0 || !bodyImg.complete) { prevBodyT = t; return; }
+    const { w: W, h: H, d } = fit(cv), [FW, FH] = B.size, TOP = 8, BOT = FH - 6;
+    const s = Math.min(H * 0.7 / FH, W * 0.8 / FW), fw = FW * s, fh = FH * s, x0 = (W - fw) / 2, y0 = H * 0.01;
+    const A = col.b, Lt = B.light, Hr = B.heartRgb, Hc = B.heartCore;
+    const forward = prevBodyT !== null && t > prevBodyT && t - prevBodyT < 0.5; prevBodyT = t;
+    cx.save();
+    if (shade > 0) {                                      // over stage light, a soft dark backing keeps the figure readable
+      const g = cx.createRadialGradient(W / 2, y0 + fh / 2, 0, W / 2, y0 + fh / 2, fh * 0.62);
+      const bg = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).slice(0, 3).join(' ');
+      g.addColorStop(0, `rgb(${bg} / ${0.75 * shade * w.p})`); g.addColorStop(1, `rgb(${bg} / 0)`);
+      cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+    }
+    cx.globalAlpha = 0.3 * w.p; cx.drawImage(bodyImg, x0, y0, fw, fh); cx.globalAlpha = w.p;
+
+    if (w.scan > 0 && w.seg) {
+      const scan = TOP + (BOT - TOP) * scanPos(t, w.seg), sy = y0 + scan * s;
+      const dir = prevScan === null ? 0 : Math.sign(scan - prevScan); prevScan = scan;   // +1 moving down
+      const swell = (0.55 + 0.45 * (st.phase === 'in' || st.phase === 'out' ? st.v : 0)) * w.scan;
+      const ahead = 50 * s, behind = (dir === 0 ? 50 : 130) * s;
+      litOutline(o => {
+        const top = sy - (dir > 0 ? behind : ahead), bot = sy + (dir > 0 ? ahead : behind);
+        const g = o.createLinearGradient(0, top, 0, bot), mid = (sy - top) / (bot - top);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(mid, `rgba(0,0,0,${swell})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        o.fillStyle = g; o.fillRect(0, 0, W, H);
+      }, `rgb(${A} / .9)`, W, H, x0, y0, fw, fh, d);
+      B.points.forEach(([, px, py], i) => {
+        const target = Math.exp(-(((py - scan) / 40) ** 2)) * swell;
+        heat[i] += (target - heat[i]) * Math.min(1, dt / (target > heat[i] ? 0.4 : 2.5));
+        glowAt(x0 + px * s, y0 + py * s, 26 * s, (0.07 + 0.8 * heat[i]), Lt, A);
+      });
+      const half = FW * 0.65 * s, mx = W / 2;
+      cx.save(); cx.globalCompositeOperation = 'lighter';
+      for (const [h, a] of [[22, 0.06], [8, 0.16], [2.2, 0.8]]) {
+        const lg = cx.createLinearGradient(mx - half, 0, mx + half, 0), aa = a * (0.7 + 0.3 * swell) * w.scan;
+        lg.addColorStop(0, `rgb(${Lt} / 0)`); lg.addColorStop(0.5, `rgb(${Lt} / ${aa})`); lg.addColorStop(1, `rgb(${Lt} / 0)`);
+        cx.fillStyle = lg; cx.filter = h > 3 ? `blur(${(h * s * 0.6).toFixed(1)}px)` : 'none';
+        const vg = h * s * 2.2; cx.fillRect(mx - half, sy - vg / 2, half * 2, vg);
+      }
+      cx.filter = 'none'; cx.restore();
+    } else { prevScan = null; heat.fill(0); }
+
+    if (w.heart > 0) {
+      let P, k;
+      if (S.pulse === 'breath') { P = st.phase === 'in' || st.phase === 'out' ? st.v : 0; const c = cycleAt(t); k = c ? c.k : -1; }
+      else { const T = 60 / 55, q = ((t % T) + T) % T, bump = (c, wd) => Math.exp(-(((q - c) / wd) ** 2)); P = 0.75 * bump(0.12, 0.09) + 0.45 * bump(0.38, 0.09); k = Math.floor(t / T); }
+      if (forward && prevPulseK !== null && k !== prevPulseK) pulseRings.push({ born: t });
+      prevPulseK = k;
+      const hx = x0 + B.heart[0] * s, hy = y0 + B.heart[1] * s, life = S.pulse === 'breath' ? 5 : 3;
+      cx.globalAlpha = w.p * w.heart;
+      litOutline(o => {
+        const rad = (110 + 50 * P) * s, g = o.createRadialGradient(hx, hy, 0, hx, hy, rad);
+        g.addColorStop(0, `rgba(0,0,0,${0.35 + 0.4 * P})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        o.fillStyle = g; o.fillRect(0, 0, W, H);
+      }, `rgb(${Hr} / .9)`, W, H, x0, y0, fw, fh, d);
+      for (let i = pulseRings.length - 1; i >= 0; i--) {
+        const age = t - pulseRings[i].born;
+        if (age < 0 || age > life) { pulseRings.splice(i, 1); continue; }
+        const rr = (24 + 90 * age / life) * s, a = (1 - age / life) * (S.pulse === 'breath' ? 0.22 : 0.1);
+        cx.beginPath(); cx.arc(hx, hy, rr, 0, Math.PI * 2); cx.lineWidth = 1.5 * d; cx.strokeStyle = `rgb(${Hr} / ${a})`; cx.stroke();
+      }
+      cx.save(); cx.globalCompositeOperation = 'lighter';
+      glowAt(hx, hy, (38 + 16 * P) * s, 0.28 + 0.5 * P, Hc, Hr);
+      glowAt(hx, hy, (90 + 30 * P) * s, 0.08 + 0.12 * P, Hr, Hr);
+      cx.restore();
+    } else { pulseRings.length = 0; prevPulseK = null; }
+    cx.restore();
+  }
+
   function frame(pn) {
     const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
     if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = 0; }
@@ -419,13 +554,20 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     }
     prevT = t;
     drawLight(t, st, dt, pn);
-    drawCircle(st, pn);
+    const bw = bodyWeights(t);
+    drawCircle(st, pn, 1 - bw.p);
+    drawBody(t, st, dt, bw);
     drawTrace(t);
     // at the very start of an out-first piece, ask for a full breath before Play
     const ready = OUT_FIRST && t < 0.05 && !playing();
     const word = ready || st.phase === 'before' ? C.beforeWord : st.phase === 'in' ? 'Breathe in' : st.phase === 'out' ? 'Breathe out' : 'Rest';
     setText('cueWord', word);
     setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
+    if (B) {                                                // with the figure shown, the cue sits below it
+      $('cue').style.transform = bw.p > 0 ? `translateY(${(bw.p * ($('cue').clientHeight / 2 - 58)).toFixed(1)}px)` : '';
+      $('cueNote').style.opacity = (bw.p * bw.heart).toFixed(3);
+      setText('cueNote', bw.heart > 0 ? B.note : '');
+    }
     setText('rate', st.len ? `<b>${(60 / st.len).toFixed(1)}</b> breaths / min` : '&nbsp;');
     setText('tNow', fmt(t));
     if (!seeking) $('seek').value = t.toFixed(1);

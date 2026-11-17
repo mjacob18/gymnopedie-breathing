@@ -157,6 +157,21 @@ def bach():
                     light='--bg: #e8e9ee; --surface: #f3f4f8; --ink: #1b1f2e; --muted: #575d70; --line: #c7cad6; --breath-rgb: 52 72 140; --wave-rgb: 130 138 160;',
                     dark='--bg: #0f111a; --surface: #161a26; --ink: #e1e4ee; --muted: #8b91a6; --line: #262b3b; --breath-rgb: 150 172 236; --wave-rgb: 92 100 124;'))
 
+def body_cues(windows, breath_at):
+    """The body figure (from analysis/body_outline.py) and its cue windows. Each window is (kind, first breath, end breath)
+    at the page's default pace, so it starts and ends on a breath; adjacent windows form one block in which the figure
+    stays on screen while the cue changes."""
+    import base64
+    F = json.load(open('data/body_figure.json'))
+    segs = [[kind, breath_at(a), breath_at(b)] for kind, a, b in windows]
+    blocks = []
+    for _, a, b in segs:
+        if blocks and abs(blocks[-1][1] - a) < 0.5: blocks[-1][1] = b
+        else: blocks.append([a, b])
+    return dict(png=base64.b64encode(open('data/body_outline.png', 'rb').read()).decode(), size=F['size'], points=F['points'],
+                heart=F['heart'], light='236 230 255', heartRgb='255 142 152', heartCore='255 222 224',
+                sweep=6, move='step', start='head', pulse='breath', note='Notice what you’re feeling', segments=segs, blocks=blocks)
+
 def says():
     D = json.load(open('data/says_timeline.json'))
     beat, cut, dur, turn = D['beat'], D['cut'], D['duration'], D['turn']
@@ -168,6 +183,7 @@ def says():
         while t(i + size) <= cut + 0.3: out.append([t(i), t(i + inn), t(i + size), 0]); i += size
         if cut - t(i) >= size * beat / 2: out.append([t(i), R2((t(i) + cut) / 2), cut, 0])
         return out
+    breath_at = lambda k: t(turn + 24 * k)                     # start of breath k at the default 6-bar pace
     steady, x = [], t(turn)
     while x + 10 <= cut + 0.3: steady.append([R2(x), R2(x + 5), R2(x + 10), 0]); x += 10
     chords = [t(i) for i in range(turn, int((cut - D['start']) / beat) + 1, 16)]
@@ -186,6 +202,7 @@ def says():
         # fades as the full sound cuts out
         light={'kind': 'fractal', 'from': D['build'], 'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3,
                'max': 0.9, 'fractal': {'th': 0.55, 'thAmp': 0.25, 'thPeriod': 200, 'rOut': 0.955, 'rIn': 0.985, 'view': 2.6, 'res': 0.75}},
+        body=body_cues([('scan', 4, 16), ('heart', 16, 22), ('scan', 40, 46), ('heart', 46, 50)], breath_at),
         fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
         tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500, only='dark',
                     light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
