@@ -483,11 +483,13 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     const A = col.b, Lt = B.light, Hr = B.heartRgb, Hc = B.heartCore;
     const forward = prevBodyT !== null && t > prevBodyT && t - prevBodyT < 0.5; prevBodyT = t;
     cx.save();
-    if (shade > 0) {                                      // over stage light, a soft dark backing keeps the figure readable
-      const g = cx.createRadialGradient(W / 2, y0 + fh / 2, 0, W / 2, y0 + fh / 2, fh * 0.62);
+    if (shade > 0) {                                      // over stage light, a tall soft dark oval behind the figure and the cue
       const bg = getComputedStyle(document.body).backgroundColor.match(/[\d.]+/g).slice(0, 3).join(' ');
-      g.addColorStop(0, `rgb(${bg} / ${0.75 * shade * w.p})`); g.addColorStop(1, `rgb(${bg} / 0)`);
-      cx.fillStyle = g; cx.fillRect(0, 0, W, H);
+      const ry = H * 0.62, rx = Math.max(fw * 1.5, 230 * d);
+      cx.save(); cx.translate(W / 2, H * 0.55); cx.scale(rx / ry, 1);
+      const g = cx.createRadialGradient(0, 0, 0, 0, 0, ry);
+      g.addColorStop(0, `rgb(${bg} / ${0.85 * shade * w.p})`); g.addColorStop(0.6, `rgb(${bg} / ${0.7 * shade * w.p})`); g.addColorStop(1, `rgb(${bg} / 0)`);
+      cx.fillStyle = g; cx.fillRect(-ry, -ry, ry * 2, ry * 2); cx.restore();
     }
     cx.globalAlpha = 0.3 * w.p; cx.drawImage(bodyImg, x0, y0, fw, fh); cx.globalAlpha = w.p;
 
