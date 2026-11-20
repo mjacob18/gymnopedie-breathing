@@ -27,7 +27,7 @@ h1 { font-family: var(--f-display); font-style: var(--display-style); font-weigh
 .cue { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; }
 .cue-word { font-family: var(--f-display); font-style: var(--display-style); font-weight: var(--display-weight); font-size: clamp(24px, 5vh, 56px); line-height: 1.1; }
 .cue-count { font-family: var(--f-mono); font-size: clamp(14px, 2.4vh, 22px); color: var(--muted); margin-top: .4em; font-variant-numeric: tabular-nums; }
-.cue-note { font-size: clamp(14px, 2.2vh, 19px); color: var(--muted); margin-top: .5em; min-height: 1.3em; opacity: 0; }
+.cue-note { font-size: clamp(15px, 2.6vh, 22px); color: var(--ink); margin-top: .5em; min-height: 1.3em; opacity: 0; }
 
 #trace { width: 100%; height: clamp(48px, 9vh, 88px); display: block; background: var(--surface); border-radius: 6px; }
 
@@ -74,6 +74,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     <select id="mode" aria-label="Pacing"></select>
     <select id="split" aria-label="Out-breath length"><option value="even">Even breath</option><option value="long">Longer out-breath</option></select>
     <label class="check"><input type="checkbox" id="ripples" checked> Ripples</label>
+    <label class="check" id="notesOpt" hidden><input type="checkbox" id="notesOn" checked> Guidance</label>
     <span class="group" id="bodyOpts" hidden>
       <label class="check"><input type="checkbox" id="bodyOn" checked> Body cues</label>
       <select id="sweep" aria-label="Body scan pace"><option value="4">Scan: 4 breaths per pass</option><option value="6">Scan: 6 breaths per pass</option><option value="8">Scan: 8 breaths per pass</option><option value="10">Scan: 10 breaths per pass</option><option value="12">Scan: 12 breaths per pass</option></select>
@@ -546,6 +547,25 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     cx.restore();
   }
 
+  // ---- guidance (optional): short written instructions under the breathing cue, each held for a few breaths
+  const NOTES = C.notes || null;
+  if (NOTES) {
+    $('notesOpt').hidden = false; S.notesOn = store.get('notesOn') !== '0'; $('notesOn').checked = S.notesOn;
+    $('notesOn').onchange = e => { S.notesOn = e.target.checked; store.set('notesOn', S.notesOn ? '1' : '0'); };
+  }
+  function noteAt(t) {
+    if (!NOTES || !S.notesOn) return null;
+    const k = bsearch(NOTES, t, n => n[0]);
+    if (k < 0 || t >= NOTES[k][1]) return null;
+    const [a, b, text] = NOTES[k], fade = 1.2;
+    return { text, o: (a <= 0.01 ? 1 : Math.min(1, (t - a) / fade)) * Math.min(1, Math.max(0, (b - t) / fade)) };
+  }
+  let noteShown = null;
+  function showNote(text, o) {
+    if (text !== noteShown) { $('cueNote').textContent = text; noteShown = text; }
+    $('cueNote').style.opacity = (0.85 * o).toFixed(3);
+  }
+
   function frame(pn) {
     const dt = Math.min(0.1, (pn - lastFrame) / 1000); lastFrame = pn;
     if (!hasAudio && vPlaying) { vT += dt; if (vT >= DUR) vT = 0; }
@@ -567,9 +587,11 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
     if (B) {                                                // with the figure shown, the cue sits below it
       $('cue').style.transform = bw.p > 0 ? `translateY(${(bw.p * ($('cue').clientHeight / 2 - 58)).toFixed(1)}px)` : '';
-      $('cueNote').style.opacity = (bw.p * bw.heart).toFixed(3);
-      setText('cueNote', bw.heart > 0 ? B.note : '');
     }
+    const note = noteAt(t);
+    if (note) showNote(note.text, note.o);
+    else if (B && !NOTES && bw.heart > 0) showNote(B.note, bw.p * bw.heart);
+    else showNote(noteShown || '', 0);
     setText('rate', st.len ? `<b>${(60 / st.len).toFixed(1)}</b> breaths / min` : '&nbsp;');
     setText('tNow', fmt(t));
     if (!seeking) $('seek').value = t.toFixed(1);
