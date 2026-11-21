@@ -587,6 +587,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     setText('cueWord', word);
     setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
     if (B) {                                                // with the figure shown, the cue sits below it
+      $('cueWord').style.opacity = $('cueCount').style.opacity = (1 - bw.p).toFixed(3);   // the figure itself carries the breath
       $('cue').style.transform = bw.p > 0 ? `translateY(${(bw.p * ($('cue').clientHeight / 2 - 58)).toFixed(1)}px)` : '';
     }
     const note = noteAt(t);

@@ -170,7 +170,7 @@ def body_cues(windows, breath_at):
         else: blocks.append([a, b])
     return dict(png=base64.b64encode(open('data/body_outline.png', 'rb').read()).decode(), size=F['size'], points=F['points'],
                 heart=F['heart'], light='236 230 255', heartRgb='255 142 152', heartCore='255 222 224',
-                sweep=6, move='step', start='head', pulse='breath', note='Notice what you’re feeling', segments=segs, blocks=blocks)
+                sweep=6, move='step', start='head', pulse='breath', note='Notice feelings and emotions', segments=segs, blocks=blocks)
 
 def says():
     D = json.load(open('data/says_timeline.json'))
@@ -211,7 +211,7 @@ def says():
             (4, 8, 'Feel weight and points of contact'),
             (8, 12, 'Let tingles, aches and tension come and go'),
             (12, 16, 'Breath, sound and body, held together'),
-            (16, 18, 'Notice what you’re feeling'),
+            (16, 18, 'Notice feelings and emotions'),
             (18, 20, 'Settled, restless, tender, heavy or light?'),
             (20, 22, 'Let feelings rise and release'),
             (22, 26, 'Thoughts pass through, like sounds'),
@@ -220,8 +220,7 @@ def says():
             (37, 40, 'Breath, sound, body and sight: one field'),
             (40, 46, 'Feel the body inside the sound'),
             (46, 48, 'Let feeling be part of the chord'),
-            (48, 50, 'Awareness wide enough to hold it all'),
-            (50, None, 'Notice how you feel now')]],
+            (48, 50, 'Awareness wide enough to hold it all')]],
         fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
         tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500, only='dark',
                     light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
