@@ -190,7 +190,7 @@ def says():
     bars = [t(i) for i in range(turn % 4, int((cut - D['start']) / beat) + 1, 4)]
     return dict(
         title='Says Breathing', heading='Nils Frahm · Says', key='frahm-says', duration=dur, end=cut,
-        order='in', beforeWord='Breathe out',
+        order='in', beforeWord='',                  # the opening guidance stands alone until the first breath
         files=['says.mp3', '02 - Says.mp3', '02_-_Says.mp3', 'Says.mp3'],
         modes=[dict(key='six', label='6 bars (in 3, out 3)', cycles=grid_cycles(24, 12)),
                dict(key='eight', label='Slower: 8 bars, with the chords', cycles=grid_cycles(32, 16)),
@@ -200,7 +200,7 @@ def says():
         env=None, envStep=None,
         # stage light: a live Julia-set fractal that rises with the build to full level, breathes with the circle and
         # fades as the full sound cuts out
-        light={'kind': 'fractal', 'from': D['build'], 'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3,
+        light={'kind': 'fractal', 'from': D['build'], 'fadeIn': R2(D['plateau'] - D['build']), 'until': cut, 'fadeOut': 3, 'circleFade': [R2(breath_at(26)), R2(breath_at(29))],
                'max': 0.9, 'fractal': {'th': 0.55, 'thAmp': 0.25, 'thPeriod': 200, 'rOut': 0.955, 'rIn': 0.985, 'view': 2.6, 'res': 0.75}},
         body=body_cues([('scan', 4, 16), ('heart', 16, 22), ('scan', 40, 46), ('heart', 46, 50)], breath_at),
         # guidance, drawn from the 'Practicing Awareness' script: breath as the steady ground, then sound, body, feeling,
@@ -223,7 +223,7 @@ def says():
             (40, 44, 'Feel the body inside the sound'),
             (44, 47, 'Let feeling be part of the chord'),
             (47, 50, 'Sights, sounds, sensations, emotions and stories in one open field of experience'),
-            (50, None, 'Rest in the experience of awareness itself')]],
+            (50, None, 'Awareness wide enough to hold it all')]],
         fonts='https://fonts.googleapis.com/css2?family=Syne:wght@500&family=Jost:wght@400;500&family=Spline+Sans+Mono:wght@400;500&display=swap',
         tokens=dict(display='"Syne", "Avenir Next", "Futura", system-ui, sans-serif', style='normal', weight=500, only='dark',
                     light='--bg: #eae8f0; --surface: #f4f3f8; --ink: #1d1a29; --muted: #5c5770; --line: #cbc7d8; --breath-rgb: 98 70 170; --wave-rgb: 140 134 160;',
