@@ -56,6 +56,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
 #fractal { filter: blur(0.5px); }
 .app { position: relative; z-index: 1; }
 .lit h1, .lit .rate, .lit .cue { text-shadow: 0 1px 14px rgb(0 0 0 / .8); }
+.lit .cue-note { max-width: min(90vw, 44ch); }
 </style>
 </head>
 <body>
@@ -581,7 +582,9 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     prevT = t;
     drawLight(t, st, dt, pn);
     const bw = bodyWeights(t);
-    drawCircle(st, pn, 1 - bw.p);
+    const note = noteAt(t);
+    // the circle gives way to the figure, to the stage light, and to a closing line after the music
+    drawCircle(st, pn, (1 - bw.p) * (L ? Math.max(0, 1 - 2 * shade) : 1) * (t >= END && note ? 0 : 1));
     drawBody(t, st, dt, bw);
     drawTrace(t);
     // at the very start of an out-first piece, ask for a full breath before Play
@@ -589,7 +592,6 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     const word = ready || st.phase === 'before' ? C.beforeWord : st.phase === 'in' ? 'Breathe in' : st.phase === 'out' ? 'Breathe out' : 'Rest';
     setText('cueWord', word);
     setText('cueCount', st.remain != null && !ready ? `${Math.ceil(st.remain)}` : '&nbsp;');
-    const note = noteAt(t);
     if (B || L) {
       // the breath words and count step aside while the figure or the stage light carries the breath, and after the
       // music once a closing line is showing
