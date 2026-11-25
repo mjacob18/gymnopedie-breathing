@@ -231,7 +231,8 @@ def says():
 
 tpl = open('analysis/present_template.html').read()
 os.makedirs('present', exist_ok=True)
-for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach()), ('frahm-says', says())):
+for name, P in (('gymnopedie', satie()), ('hon-shirabe', hon()), ('mozart-k387', mozart()), ('brahms-op115', brahms()), ('bach-bwv1007', bach()), ('frahm-says', says()),
+                ('frahm-says-video', dict(says(), video=True, title='Says Breathing (video)'))):
     T = P.pop('tokens')
     font = f"--f-display: {T['display']}; --display-style: {T['style']}; --display-weight: {T['weight']};"
     if T.get('only') == 'dark':      # a page with stage light keeps the dark room whatever the system theme

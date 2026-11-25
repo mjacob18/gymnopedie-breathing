@@ -128,4 +128,4 @@ python3 analysis/says.py path/to/recording.mp3        # writes says_timeline.jso
 - `bach.m4a`, `bach.mp3`, `01 Bach (JS)_ Cello Suite #1 In G, B.m4a`, `01_Bach_JS__Cello_Suite_1_In_G_B.m4a`, `Bach (JS)_ Cello Suite #1 In G, BMV 1007 - Prelude.m4a` (a browser that cannot play AAC moves on to `bach.mp3`)
 - `says.mp3`, `02 - Says.mp3`, `02_-_Says.mp3`, `Says.mp3`
 
-If none is there, choose the file under Options; the browser then remembers it. Rebuild them all with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).
+If none is there, choose the file under Options; the browser then remembers it. `present/frahm-says-video.html` is the same Says page made for screen recording and watching on a phone: no breath trace, the guidance about two and a half times larger and centred (just below the figure during the body cues), and controls that fade away while it plays (move the mouse or press a key to bring them back). Any page can set `video` in its config for this layout. Rebuild them all with `python3 analysis/build_present.py` (from `analysis/present_template.html` and the timelines in `data/`).

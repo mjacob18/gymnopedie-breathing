@@ -56,6 +56,16 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
 .app { position: relative; z-index: 1; }
 .lit h1, .lit .rate, .lit .cue { text-shadow: 0 1px 14px rgb(0 0 0 / .8); }
 .lit .cue-note { max-width: min(90vw, 44ch); }
+/* video version: for recording and watching on a phone. No breath trace, large centred guidance, and controls that
+   fade away while playing (move the mouse or press a key to bring them back) */
+.video #trace { display: none; }
+.video .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 18px 24px; z-index: 3; background: linear-gradient(transparent, var(--bg) 55%); transition: opacity .6s; }
+.video .options { position: fixed; left: 24px; right: 24px; bottom: 84px; z-index: 3; }
+.video.idle .bar { opacity: 0; pointer-events: none; }
+.video.idle { cursor: none; }
+.video .cue-word { font-size: clamp(28px, 6.5vh, 68px); }
+.video .cue-note { font-size: clamp(24px, 5.2vh, 56px); max-width: min(92vw, 20ch); line-height: 1.22; }
+.video.lit .cue-note { max-width: min(92vw, 24ch); }
 </style>
 </head>
 <body>
@@ -97,6 +107,14 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
 <script>
 (() => {
   const C = JSON.parse(document.getElementById('config').textContent);
+  if (C.video) {                                          // video version: controls hide while playing, return on any input
+    document.body.classList.add('video');
+    let idleTimer = 0;
+    const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleTimer); idleTimer = setTimeout(() => {
+      if (document.getElementById('play').textContent === 'Pause' && document.getElementById('options').hidden) document.body.classList.add('idle'); else wake(); }, 2500); };
+    ['mousemove', 'mousedown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, wake, { passive: true }));
+    wake();
+  }
   const $ = id => document.getElementById(id);
   const DUR = C.duration, END = C.end, OUT_FIRST = C.order === 'out';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -481,7 +499,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
     if (!B || w.p <= 0 || !bodyImg.complete) { prevBodyT = t; return; }
     const { w: W, h: H, d } = fit(cv), [FW, FH] = B.size, TOP = 8, BOT = FH - 6;
     // the figure and the guidance line below it are centred together, close to each other
-    const room = 104 * d, s = Math.min((H - room) * 0.96 / FH, W * 0.8 / FW), fw = FW * s, fh = FH * s;
+    const room = (C.video ? 0.24 * H + 20 * d : 104 * d), s = Math.min((H - room) * 0.96 / FH, W * 0.8 / FW), fw = FW * s, fh = FH * s;
     const x0 = (W - fw) / 2, y0 = Math.max(H * 0.01, (H - fh - room) / 2);
     figBottom = (y0 + fh) / d;                           // in CSS pixels, for placing the guidance line
     const A = col.b, Lt = B.light, Hr = B.heartRgb, Hc = B.heartCore;
@@ -567,7 +585,7 @@ select { font: 14px var(--f-body); padding: 7px 9px; border-radius: 6px; border:
   let noteShown = null;
   function showNote(text, o) {
     if (text !== noteShown) { $('cueNote').textContent = text; noteShown = text; }
-    $('cueNote').style.opacity = (0.85 * o).toFixed(3);
+    $('cueNote').style.opacity = ((C.video ? 1 : 0.85) * o).toFixed(3);
   }
 
   function frame(pn) {
